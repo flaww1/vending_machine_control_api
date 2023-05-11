@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,9 +7,230 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model product {
-  id          Int     @id @default(autoincrement()) @db.UnsignedInt
-  name        String  @unique @db.VarChar(255)
-  description String  @db.VarChar(1000)
-  price       Decimal
+model administrador {
+  IdAdmin Int       @id
+  Nome    String    @db.VarChar(255)
+  maquina maquina[]
+}
+
+model estado {
+  IdEstado        Int       @id
+  DescricaoEstado String?   @db.VarChar(255)
+  maquina         maquina[]
+}
+
+model feedback {
+  IdFeedback       Int                @id
+  Titulo           String?            @db.VarChar(255)
+  CorpoTexto       String?            @db.VarChar(255)
+  Numero           Int?
+  IdTipoFeedback   Int?
+  tipofeedback     tipofeedback?      @relation(fields: [IdTipoFeedback], references: [IdTipoFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedTipo")
+  utilizador       utilizador?        @relation(fields: [Numero], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedUtili")
+  feedback_maquina feedback_maquina[] @ignore
+  feedback_produto feedback_produto[] @ignore
+
+  @@index([IdTipoFeedback], map: "fk_FeedTipo")
+  @@index([Numero], map: "fk_FeedUtili")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model feedback_maquina {
+  IdFeedback Int?
+  IdMaquina  Int?
+  feedback   feedback? @relation(fields: [IdFeedback], references: [IdFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedMaquiFeed")
+  maquina    maquina?  @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedMaquiMaqui")
+
+  @@index([IdFeedback], map: "fk_FeedMaquiFeed")
+  @@index([IdMaquina], map: "fk_FeedMaquiMaqui")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model feedback_produto {
+  IdFeedback Int?
+  IdProduto  Int?
+  feedback   feedback? @relation(fields: [IdFeedback], references: [IdFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedProduFeed")
+  produto    produto?  @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedProduProdu")
+
+  @@index([IdFeedback], map: "fk_FeedProduFeed")
+  @@index([IdProduto], map: "fk_FeedProduProdu")
+  @@ignore
+}
+
+model fornecedor {
+  IdFornecedor       Int                  @id
+  Nome               String?              @db.VarChar(255)
+  produto_fornecedor produto_fornecedor[] @ignore
+  reabastecimento    reabastecimento[]
+}
+
+model manutencao {
+  IdManutencao      Int               @id
+  Motivo            String            @db.VarChar(255)
+  Dia               DateTime          @db.DateTime(0)
+  IdTecnico         Int
+  IdMaquina         Int?
+  tecnicomanutencao tecnicomanutencao @relation(fields: [IdTecnico], references: [IdTecnico], onDelete: NoAction, onUpdate: NoAction, map: "fk_ManuTec")
+  maquina           maquina?          @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_ManutMaqui")
+
+  @@index([IdTecnico], map: "fk_ManuTec")
+  @@index([IdMaquina], map: "fk_ManutMaqui")
+}
+
+model maquina {
+  IdMaquina          Int                  @id
+  Localizacao        String               @db.VarChar(255)
+  Modelo             String?              @db.VarChar(255)
+  IdTipoMaquina      Int?
+  IdAdmin            Int
+  IdModoEnergia      Int
+  IdEstado           Int
+  feedback_maquina   feedback_maquina[]   @ignore
+  manutencao         manutencao[]
+  tipomaquina        tipomaquina?         @relation(fields: [IdTipoMaquina], references: [IdTipoMaquina], onDelete: NoAction, onUpdate: NoAction, map: "FK__Maquina__IdTipoM__4D94879B")
+  administrador      administrador        @relation(fields: [IdAdmin], references: [IdAdmin], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdAdmin")
+  estado             estado               @relation(fields: [IdEstado], references: [IdEstado], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdEstado")
+  modoenergia        modoenergia          @relation(fields: [IdModoEnergia], references: [IdModoEnergia], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdModo")
+  prateleira         prateleira[]
+  transacao          transacao[]
+  utilizador_maquina utilizador_maquina[] @ignore
+
+  @@index([IdTipoMaquina], map: "FK__Maquina__IdTipoM__4D94879B")
+  @@index([IdAdmin], map: "fk_IdAdmin")
+  @@index([IdEstado], map: "fk_IdEstado")
+  @@index([IdModoEnergia], map: "fk_IdModo")
+}
+
+model modoenergia {
+  IdModoEnergia Int       @id
+  DescricaoModo String?   @db.VarChar(255)
+  maquina       maquina[]
+}
+
+model prateleira {
+  IdPrateleira       Int                  @id
+  Linha              Int
+  Coluna             Int
+  IdMaquina          Int?
+  maquina            maquina?             @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_PratMaqui")
+  produto_prateleira produto_prateleira[] @ignore
+
+  @@index([IdMaquina], map: "fk_PratMaqui")
+}
+
+model produto {
+  IdProduto          Int                  @id
+  Nome               String               @db.VarChar(255)
+  Descricao          String               @db.VarChar(255)
+  ValorEnergetico    String               @db.VarChar(255)
+  Proteinas          String               @db.VarChar(255)
+  Carboidratos       String               @db.VarChar(255)
+  Gorduras           String               @db.VarChar(255)
+  Preco              Decimal?             @db.Decimal(5, 2)
+  IdTipoProduto      Int?
+  feedback_produto   feedback_produto[]   @ignore
+  tipoproduto        tipoproduto?         @relation(fields: [IdTipoProduto], references: [IdTipoProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProduTipo")
+  produto_fornecedor produto_fornecedor[] @ignore
+  produto_prateleira produto_prateleira[] @ignore
+  reabastecimento    reabastecimento[]
+  transacao          transacao[]
+
+  @@index([IdTipoProduto], map: "fk_ProduTipo")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model produto_fornecedor {
+  IdProduto    Int?
+  IdFornecedor Int?
+  fornecedor   fornecedor? @relation(fields: [IdFornecedor], references: [IdFornecedor], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProdFornForn")
+  produto      produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProdFornProd")
+
+  @@index([IdFornecedor], map: "fk_ProdFornForn")
+  @@index([IdProduto], map: "fk_ProdFornProd")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model produto_prateleira {
+  IdProduto    Int?
+  IdPrateleira Int?
+  prateleira   prateleira? @relation(fields: [IdPrateleira], references: [IdPrateleira], onDelete: NoAction, onUpdate: NoAction, map: "fk_PratProdu")
+  produto      produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProduPrat")
+
+  @@index([IdPrateleira], map: "fk_PratProdu")
+  @@index([IdProduto], map: "fk_ProduPrat")
+  @@ignore
+}
+
+model reabastecimento {
+  IdReabastecimento   Int         @id
+  DataReabastecimento DateTime    @db.DateTime(0)
+  IdProduto           Int?
+  IdFornecedor        Int?
+  fornecedor          fornecedor? @relation(fields: [IdFornecedor], references: [IdFornecedor], onDelete: NoAction, onUpdate: NoAction, map: "fk_ReabForne")
+  produto             produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ReabProdut")
+
+  @@index([IdFornecedor], map: "fk_ReabForne")
+  @@index([IdProduto], map: "fk_ReabProdut")
+}
+
+model tecnicomanutencao {
+  IdTecnico  Int          @id
+  Nome       String?      @db.VarChar(255)
+  manutencao manutencao[]
+}
+
+model tipofeedback {
+  IdTipoFeedback Int        @id
+  Nome           String?    @db.VarChar(255)
+  feedback       feedback[]
+}
+
+model tipomaquina {
+  IdTipoMaquina Int       @id
+  Descricao     String    @db.VarChar(255)
+  maquina       maquina[]
+}
+
+model tipoproduto {
+  IdTipoProduto Int       @id
+  Nome          String?   @db.VarChar(255)
+  produto       produto[]
+}
+
+model transacao {
+  IdTransacao   Int        @id
+  DataTransacao DateTime   @db.DateTime(0)
+  Custo         Int
+  IdUtilizador  Int
+  IdMaquina     Int
+  IdProduto     Int
+  maquina       maquina    @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransMaqui")
+  produto       produto    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransProdut")
+  utilizador    utilizador @relation(fields: [IdUtilizador], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransUtili")
+
+  @@index([IdMaquina], map: "fk_TransMaqui")
+  @@index([IdProduto], map: "fk_TransProdut")
+  @@index([IdUtilizador], map: "fk_TransUtili")
+}
+
+model utilizador {
+  Numero             Int                  @id
+  Nome               String               @db.VarChar(255)
+  feedback           feedback[]
+  transacao          transacao[]
+  utilizador_maquina utilizador_maquina[] @ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model utilizador_maquina {
+  Numero     Int?
+  IdMaquina  Int?
+  maquina    maquina?    @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_Maquina")
+  utilizador utilizador? @relation(fields: [Numero], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_Utilizador")
+
+  @@index([IdMaquina], map: "fk_Maquina")
+  @@index([Numero], map: "fk_Utilizador")
+  @@ignore
 }

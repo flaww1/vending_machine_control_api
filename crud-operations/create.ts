@@ -8,7 +8,7 @@ async function main() {
       { name: 'Kinder Bueno', description: 'Chocolate com recheio de avelã', price: '20' },
     ];
 
-    const res = await prisma.product.createMany({
+    const res = await prisma.produto.createMany({
 
       data,
       skipDuplicates: true,
