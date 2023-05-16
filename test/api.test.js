@@ -2,10 +2,10 @@ const request = require('supertest');
 
 const app = require('../src/app');
 
-describe('GET /api/v1', () => {
+describe('GET /api/routes/', () => {
   it('responds with a json message', (done) => {
     request(app)
-      .get('/api/v1')
+      .get('/api/')
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
       .expect(200, {
@@ -14,10 +14,10 @@ describe('GET /api/v1', () => {
   });
 });
 
-describe('GET /api/v1/emojis', () => {
+describe('GET /api/', () => {
   it('responds with a json message', (done) => {
     request(app)
-      .get('/api/v1/emojis')
+      .get('/api/')
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
       .expect(200, ['😀', '😳', '🙄'], done);

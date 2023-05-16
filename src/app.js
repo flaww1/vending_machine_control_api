@@ -3,7 +3,6 @@ const morgan = require('morgan');
 
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
 
 require('dotenv').config();
 
@@ -14,10 +13,6 @@ const feedbackRoutes = require('./api/routes/feedbacks');
 
 const app = express();
 
-mongoose.connect(`mongodb+srv://vending-machine-control:${process.env.MONGO_ATLAS_PW}@vending-machine-control.0sah4ky.mongodb.net/`, {
-  useNewUrlParser: true,
-});
-
 app.use(morgan('dev'));
 
 app.use(cors());
@@ -27,7 +22,7 @@ app.use(bodyParser.json({}));
 app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
-    message: 'Home page',
+    message: '🦄🌈✨👋🌎🌍🌏✨🌈🦄',
   });
 });
 
@@ -44,7 +39,7 @@ app.use((req, res, next) => {
 app.use('/machines', machineRoutes);
 app.use('/feedbacks', feedbackRoutes);
 
-app.use('/api/v1', api);
+app.use('/api/routes', api);
 app.use(middlewares.notFound);
 app.use(middlewares.errorHandler);
 

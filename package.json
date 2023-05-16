@@ -1,7 +1,7 @@
 {
-  "name": "express-api-starter",
+  "name": "vending-machine-control-API",
   "version": "1.2.0",
-  "description": "A basic starter for an express.js API",
+  "description": "REST API para o projeto de PDS",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -10,10 +10,10 @@
     "test": "jest"
   },
   "keywords": [],
-  "author": "CJ R. <cj@null.computer> (https://w3cj.now.sh)",
+  "author": "a21110)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/w3cj/express-api-starter.git"
+    "url": "https://github.com/flaww1/vending_machine_control_api.git"
   },
   "license": "MIT",
   "dependencies": {

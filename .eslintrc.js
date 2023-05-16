@@ -3,7 +3,7 @@ module.exports = {
   env: {
     jest: true,
   },
-  extends: 'airbnb-base',
+  extends: 'eslint:recommended',
   rules: {
     'no-underscore-dangle': 0,
     'no-param-reassign': 0,
