@@ -15,7 +15,13 @@ function errorHandler(err, req, res, next) {
   });
 }
 
+function defaultErr() {
+  return {message: "Something went wrong."}
+}
+
 module.exports = {
   errorHandler,
   notFound,
+  defaultErr,
 };
+

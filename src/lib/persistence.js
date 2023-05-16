@@ -39,8 +39,16 @@ function manualPagination(array, page_size, page_number) {
 
 /* Machine Functions */
 
-async function getAllMachines(state, type, energy_mode) {
-  return machines = await prisma.maquina.findMany();
+// change to new schema
+
+async function getAllMachines()
+{
+  try {
+    return await prisma.maquina.findMany();
+  } catch (e) {
+    report(e);
+    return null;
+  }
 }
 
 async function createMachines(params) {
@@ -134,11 +142,6 @@ async function getMachineByProductId(id) {
   }
 }
 
-
-
-
-
-
 async function getAllProductsInShelf(id) {
   try {
     return products = await prisma.produto.findMany({
@@ -151,8 +154,6 @@ async function getAllProductsInShelf(id) {
     return null;
   }
 }
-
-
 
 async function getEmptyShelvesInMachine(id) {
   try {
@@ -198,18 +199,7 @@ async function getAllProductsInMachine(id) {
 
 }
 
-async function getAllProductsInShelf(id) {
-  try {
-    return products = await prisma.produto.findMany({
-      where: {
-        IdPrateleira: id
-      }
-    });
-  } catch (e) {
-    report(e);
-    return null;
-  }
-}
+
 
 // * PRODUTOS *
 
@@ -222,7 +212,7 @@ async function createProducts(params) {
 
     let newProduct = await prisma.produto.create({
       data: {
-        IdProduto: id
+        IdProduto: id,
         Nome: params.name,
         Descricao: params.description,
         Valorenergetico: Number(params.energy_value),
@@ -471,10 +461,6 @@ async function createProviders(params) {
   }
 }
 
-async function getAllUsers() {
-  return users = await prisma.utilizador.findMany();
-}
-
 async function getAllFeedbacks(params) {
   return feedbacks = await prisma.feedback.findMany();
 }
@@ -574,9 +560,59 @@ async function createMaintenances(params) {
   }
 }
 
+async function getAllUsers() {
+  return users = await prisma.utilizador.findMany();
+}
 
+async function createUser(params) {
+  try {
 
+    let newUser = await prisma.User.create({
+      data: {
+        first_name: params.first_name,
+        last_name: params.last_name,
+        password: params.password,
+        email: params.email,
+        type: params.type,
+        registration_date: params.registration_date,
+      }
+    });
 
+    console.log((newUser));
+    return { id: newUser.number };
+
+  } catch (e) {
+
+    report(e);
+    return null;
+  }
+}
+
+async function getUserByNumber(){
+  try {
+    return user = await prisma.User.findMany({
+      where: {
+        number: number
+      }
+    });
+  } catch (e) {
+    report(e);
+    return null;
+  }
+}
+
+async function getUserByEmail(email){
+  try {
+    return user = await prisma.User.findMany({
+      where: {
+        email: email
+      }
+    });
+  } catch (e) {
+    report(e);
+    return null;
+  }
+}
 
 module.exports = {
   getAllMachines,
@@ -609,5 +645,8 @@ module.exports = {
   deleteFeedback,
   getAllMaintenances,
   createMaintenances,
+  createUser,
+  getUserByNumber,
+  getUserByEmail
 
 };

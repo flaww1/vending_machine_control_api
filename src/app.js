@@ -1,3 +1,4 @@
+// * Importing all the required modules and middlewares * //
 const express = require('express');
 const morgan = require('morgan');
 
@@ -6,10 +7,9 @@ const bodyParser = require('body-parser');
 
 require('dotenv').config();
 
-const middlewares = require('./middlewares');
+const middlewares = require('./lib/error');
 const api = require('./api/routes');
-const machineRoutes = require('./api/routes/machines');
-const feedbackRoutes = require('./api/routes/feedbacks');
+const passport = require('./lib/authentication').passport;
 
 const app = express();
 
@@ -36,11 +36,35 @@ app.use((req, res, next) => {
   next();
 });
 
+
+// Passport middleware
+// Using pre-setup passport with rules defined in lib/authentication.js
+app.use(passport.initialize());
+app.use(passport.session());
+module.exports.passport = passport; // Allow passport to be used by other routes
+
+/* Importing all API routes */
+const machineRoutes = require('./api/routes/machines');
+const feedbackRoutes = require('./api/routes/feedbacks');
+const authRoutes = require('./api/routes/auth');
+const productRoutes = require('./api/routes/products');
+
+
 app.use('/machines', machineRoutes);
 app.use('/feedbacks', feedbackRoutes);
+app.use('/auth', authRoutes);
+app.use('/products', productRoutes);
+
 
 app.use('/api/routes', api);
+
+/* Importing error handling middlewares */
 app.use(middlewares.notFound);
 app.use(middlewares.errorHandler);
+app.use(middlewares.defaultErr);
+
+/* Critical Routes */
+
+
 
 module.exports = app;

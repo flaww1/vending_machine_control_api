@@ -1,6 +1,6 @@
 const express = require('express');
 const persistence = require('../../lib/persistence');
-const { errorHandler } = require('../../middlewares');
+const { errorHandler } = require('../../lib/error');
 const { createMachines } = require('../../lib/persistence');
 
 const router = express.Router();
