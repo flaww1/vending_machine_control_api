@@ -1,13 +1,13 @@
 // Imports
 const express   = require('express');
 const router    = express.Router();
-const passport  = require('../../app').passport;
+const passport  = require('../../src/app').passport;
 const jwt       = require("jsonwebtoken");
 const cors = require('cors');
 
-/* Greenly libraries */
+
 const { loginValidator } = require('../../lib/validation');
-const { defaultErr,
+const {
   errorHandler
 } = require('../../lib/error');
 const authentication = require('../../lib/authentication');
@@ -57,7 +57,7 @@ router.post('/login', loginValidator(), async (req, res, next) => {
   })(req, res, next);
 });
 
-router.get('/status', authentication.check, async (req, res, next) => {
+router.get('/status', authentication.check, async (req, res) => {
   if (req.user) {
     res.status(200).send({
       message: "Valid token. User logged in.",

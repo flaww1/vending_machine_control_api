@@ -7,152 +7,194 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// USER
 model User {
-  number            Int            @id @default(autoincrement())
-  first_name        String         @db.VarChar(255)
-  last_name         String         @db.VarChar(255)
-  password          String         @db.VarChar(255)
-  email             String         @unique(map: "email") @db.VarChar(255)
-  type              User_type
-  registration_date DateTime       @db.DateTime(0)
-  Feedback          Feedback[]
-  Order             Order[]
-  User_Machine      User_Machine[] @relation("User_Machine")
-  Wishlist          Wishlist[]
+  number              Int                   @id @default(autoincrement())
+  first_name          String                @db.VarChar(255)
+  last_name           String                @db.VarChar(255)
+  password            String                @db.VarChar(255)
+  email               String                @unique(map: "email") @db.VarChar(255)
+  type                User_type
+  registration_date   DateTime              @db.DateTime(0)
+  Feedback            Feedback[]
+  Order               Order[]
+  Wishlist            Wishlist[]
+  Provider            Provider[]
+  Machine             Machine[]
+  Machine_Maintenance Machine_Maintenance[]
+}
+
+model Provider {
+  providerId       Int                @id @default(autoincrement())
+  provider         User               @relation(fields: [providerId], references: [number])
+  type             Provider_type
+  Restock          Restock[]
+  Provider_Product Provider_Product[]
 }
 
 model Machine {
-  id                  Int                   @id @default(autoincrement())
-  model               String                @db.VarChar(255)
+  machineId           Int                   @id @default(autoincrement())
+  model               String?               @db.VarChar(255)
   type                Machine_Types
   status              Machine_Status
   energy_mode         EnergyMode_Types
   location            String                @db.VarChar(255)
-  admin               User                  @relation(fields: [admin_number], references: [number])
+  adminId             Int                   @db.Int
+  admin               User                  @relation(fields: [adminId], references: [number])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
   EnergyMode          EnergyMode[]
   Machine_Maintenance Machine_Maintenance[]
   Order               Order[]
   Product             Product[]
-  User_Machine        User_Machine[]        @relation("User_Machine")
+  Shelf               Shelf[]
+  Stock               Stock[]
+  Feedback_Machine    Feedback_Machine[]
 }
 
 model Product {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(255)
-  description String       @db.VarChar(255)
-  type        Product_Type
-  price       Float        @db.Float
-  machine     Machine      @relation(fields: [machine_id], references: [id])
-  Feedback    Feedback[]
-  Order       Order[]
+  productId        Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  image_uri        String             @db.VarChar(1000)
+  description      String             @db.VarChar(255)
+  type             Product_Type
+  price            Float              @db.Float
+  machineId        Int                @db.Int
+  machine          Machine            @relation(fields: [machineId], references: [machineId])
+  Feedback         Feedback[]
+  Order            Order[]
+  Shelf            Shelf[]
+  Product_Shelf    Product_Shelf[]
+  Stock            Stock[]
+  Feedback_Product Feedback_Product[]
+  Provider_Product Provider_Product[]
+  Restock          Restock[]
+  Wishlist         Wishlist[]
 }
 
 model Shelf {
-  id       Int      @id @default(autoincrement())
-  number   Int      @db.Int
-  machine  Machine  @relation(fields: [machine_id], references: [id])
-  Product  Product? @relation(fields: [product_id], references: [id])
-  quantity Int      @db.Int
+  shelfId       Int             @id @default(autoincrement())
+  number        Int             @db.Int
+  machineId     Int             @db.Int
+  productId     Int?            @db.Int
+  Machine       Machine         @relation(fields: [machineId], references: [machineId])
+  Product       Product?        @relation(fields: [productId], references: [productId])
+  slot_count    Int             @db.Int
+  Product_Shelf Product_Shelf[]
 }
 
 model Product_Shelf {
-  id       Int     @id @default(autoincrement())
-  shelf    Shelf   @relation(fields: [shelf_id], references: [id])
-  product  Product @relation(fields: [product_id], references: [id])
-  quantity Int     @db.Int
+  product_shelfId Int     @id @default(autoincrement())
+  shelf           Shelf   @relation(fields: [product_shelfId], references: [shelfId])
+  productId       Int     @db.Int
+  product         Product @relation(fields: [productId], references: [productId])
+  quantity_inSlot Int     @db.Int
 }
 
 model Stock {
-  id       Int     @id @default(autoincrement())
-  machine  Machine @relation(fields: [machine_id], references: [id])
-  Product  Product @relation(fields: [product_id], references: [id])
-  quantity Int     @db.Int
+  stockId   Int     @id @default(autoincrement())
+  machineId Int     @db.Int
+  machine   Machine @relation(fields: [machineId], references: [machineId])
+  productId Int     @db.Int
+  Product   Product @relation(fields: [productId], references: [productId])
+  quantity  Int     @db.Int
 }
 
 model Order {
-  id      Int          @id @default(autoincrement())
-  status  Order_Status
-  date    DateTime     @db.DateTime(0)
-  cost    Float        @db.Float
-  user    User         @relation(fields: [user_number], references: [number])
-  machine Machine      @relation(fields: [machine_id], references: [id])
-  Product Product      @relation(fields: [product_id], references: [id])
-}
-
-model User_Machine {
-  id         Int          @id @default(autoincrement())
-  user       User         @relation(fields: [user_number], references: [number])
-  machine    Machine      @relation(fields: [machine_id], references: [id])
-  date       DateTime     @db.DateTime(0)
-  EnergyMode EnergyMode[]
-  Wishlist   Wishlist[]
-  Shelf      Shelf[]
-  Stock      Stock[]
+  orderId   Int          @id @default(autoincrement())
+  status    Order_Status
+  date      DateTime     @db.DateTime(0)
+  cost      Float        @db.Float
+  userId    Int          @db.Int
+  user      User         @relation(fields: [userId], references: [number])
+  machine   Machine      @relation(fields: [machineId], references: [machineId])
+  machineId Int          @db.Int
+  Product   Product      @relation(fields: [productId], references: [productId])
+  productId Int          @db.Int
 }
 
 model Feedback {
-  id          Int             @id @default(autoincrement())
-  title       String          @db.VarChar(255)
-  description String          @db.VarChar(255)
-  type        Feedback_Type
-  status      Feedback_Status
-  date        DateTime        @db.DateTime(0)
-  user        User            @relation(fields: [user_number], references: [number])
+  feedbackId       Int                @id @default(autoincrement())
+  title            String             @db.VarChar(255)
+  description      String             @db.VarChar(255)
+  type             Feedback_Type
+  status           Feedback_Status
+  date             DateTime           @db.DateTime(0)
+  userId           Int                @db.Int
+  user             User               @relation(fields: [userId], references: [number])
+  Product          Product?           @relation(fields: [productProductId], references: [productId])
+  productProductId Int?
+  Feedback_Machine Feedback_Machine[]
+  Feedback_Product Feedback_Product[]
 }
 
 model Feedback_Machine {
-  id       Int      @id @default(autoincrement())
-  feedback Feedback @relation(fields: [feedback_id], references: [id])
-  machine  Machine  @relation(fields: [machine_id], references: [id])
+  feedback_machineId Int      @id @default(autoincrement())
+  feedbackId         Int      @db.Int
+  feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
+  machineId          Int      @db.Int
+  machine            Machine  @relation(fields: [machineId], references: [machineId])
 }
 
 model Feedback_Product {
-  id       Int      @id @default(autoincrement())
-  feedback Feedback @relation(fields: [feedback_id], references: [id])
-  product  Product  @relation(fields: [product_id], references: [id])
+  feedback_productId Int      @id @default(autoincrement())
+  feedbackId         Int      @db.Int
+  feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
+  productId          Int      @db.Int
+  product            Product  @relation(fields: [productId], references: [productId])
 }
 
 model EnergyMode {
-  id      Int              @id @default(autoincrement())
-  type    EnergyMode_Types
-  machine Machine          @relation(fields: [machine_id], references: [id])
+  energymodeId Int              @id @default(autoincrement())
+  type         EnergyMode_Types
+  machineId    Int              @db.Int
+  machine      Machine          @relation(fields: [machineId], references: [machineId])
 }
 
 model Provider_Product {
-  id       Int      @id @default(autoincrement())
-  provider Provider @relation(fields: [provider_id], references: [id])
-  product  Product  @relation(fields: [product_id], references: [id])
+  provider_productId Int      @id @default(autoincrement())
+  providerId         Int      @db.Int
+  provider           Provider @relation(fields: [providerId], references: [providerId])
+  productId          Int      @db.Int
+  product            Product  @relation(fields: [productId], references: [productId])
 }
 
 model Restock {
-  id       Int      @id @default(autoincrement())
-  date     DateTime @db.DateTime(0)
-  provider Provider @relation(fields: [provider_id], references: [id])
-  product  Product  @relation(fields: [product_id], references: [id])
-  quantity Int      @db.Int
+  restockId  Int      @id @default(autoincrement())
+  date       DateTime @db.DateTime(0)
+  providerId Int      @db.Int
+  provider   Provider @relation(fields: [providerId], references: [providerId])
+  productId  Int      @db.Int
+  product    Product  @relation(fields: [productId], references: [productId])
+  quantity   Int      @db.Int
 }
 
 model Machine_Maintenance {
-  id       Int                          @id @default(autoincrement())
-  type     Machine_Maintenance_Type
-  user     User                         @relation(fields: [user_number], references: [number])
-  priority Machine_Maintenance_Priority
-  status   Machine_Maintenance_Status
-  date     DateTime                     @db.DateTime(0)
-  machine  Machine                      @relation(fields: [machine_id], references: [id])
+  machine_maintenanceId Int                          @id @default(autoincrement())
+  type                  Machine_Maintenance_Type
+  userId                Int                          @db.Int
+  user                  User                         @relation(fields: [userId], references: [number])
+  priority              Machine_Maintenance_Priority
+  status                Machine_Maintenance_Status
+  date                  DateTime                     @db.DateTime(0)
+  machineId             Int                          @db.Int
+  machine               Machine                      @relation(fields: [machineId], references: [machineId])
 }
 
 model Wishlist {
-  id      Int     @id @default(autoincrement())
-  user    User    @relation(fields: [user_number], references: [number])
-  product Product @relation(fields: [product_id], references: [id])
+  wishlistId Int     @id @default(autoincrement())
+  userId     Int     @db.Int
+  user       User    @relation(fields: [userId], references: [number])
+  productId  Int     @db.Int
+  product    Product @relation(fields: [productId], references: [productId])
 }
 
 enum User_type {
   ADMINISTRATOR
   USER
+}
+
+enum Provider_type {
   SUPPLIER
   MAINTENANCE
 }

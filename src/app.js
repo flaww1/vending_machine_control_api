@@ -1,15 +1,16 @@
 // * Importing all the required modules and middlewares * //
 const express = require('express');
 const morgan = require('morgan');
+const session = require('express-session');
 
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
 require('dotenv').config();
 
-const middlewares = require('./lib/error');
-const api = require('./api/routes');
-const passport = require('./lib/authentication').passport;
+const middlewares = require('../lib/error');
+const api = require('../api/routes');
+const passport = require('../lib/authentication').passport;
 
 const app = express();
 
@@ -35,7 +36,12 @@ app.use((req, res, next) => {
   }
   next();
 });
-
+app.use(session({
+  secret: 'key123',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
+}));
 
 // Passport middleware
 // Using pre-setup passport with rules defined in lib/authentication.js
@@ -44,10 +50,10 @@ app.use(passport.session());
 module.exports.passport = passport; // Allow passport to be used by other routes
 
 /* Importing all API routes */
-const machineRoutes = require('./api/routes/machines');
-const feedbackRoutes = require('./api/routes/feedbacks');
-const authRoutes = require('./api/routes/auth');
-const productRoutes = require('./api/routes/products');
+const machineRoutes = require('../api/routes/machines');
+const feedbackRoutes = require('../api/routes/feedbacks');
+const authRoutes = require('../api/routes/auth');
+const productRoutes = require('../api/routes/products');
 
 
 app.use('/machines', machineRoutes);
@@ -62,8 +68,6 @@ app.use('/api/routes', api);
 app.use(middlewares.notFound);
 app.use(middlewares.errorHandler);
 app.use(middlewares.defaultErr);
-
-/* Critical Routes */
 
 
 

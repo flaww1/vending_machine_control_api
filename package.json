@@ -2,15 +2,15 @@
   "name": "vending-machine-control-API",
   "version": "1.2.0",
   "description": "REST API para o projeto de PDS",
-  "main": "index.js",
+  "main": "./src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "lint": "eslint --fix src",
+    "start": "node ./src/index.js",
+    "dev": "nodemon ./src/index.js",
+    "lint": "eslint --fix server/src",
     "test": "jest"
   },
   "keywords": [],
-  "author": "a21110)",
+  "author": "Flávio Pereira a21110",
   "repository": {
     "type": "git",
     "url": "https://github.com/flaww1/vending_machine_control_api.git"
@@ -23,6 +23,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "express-validator": "^7.0.1",
     "helmet": "^6.0.1",
     "jsonwebtoken": "^9.0.0",
     "mongodb": "^5.4.0",

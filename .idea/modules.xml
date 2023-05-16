@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/vending_machine_control_api.iml" filepath="$PROJECT_DIR$/.idea/vending_machine_control_api.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/vending_machine_control.iml" filepath="$PROJECT_DIR$/.idea/vending_machine_control.iml" />
     </modules>
   </component>
 </project>
