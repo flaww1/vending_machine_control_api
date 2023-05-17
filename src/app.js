@@ -54,12 +54,15 @@ const machineRoutes = require('../api/routes/machines');
 const feedbackRoutes = require('../api/routes/feedbacks');
 const authRoutes = require('../api/routes/auth');
 const productRoutes = require('../api/routes/products');
+const userRoutes = require('../api/routes/users');
+
 
 
 app.use('/machines', machineRoutes);
 app.use('/feedbacks', feedbackRoutes);
 app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
+app.use('/users', userRoutes);
 
 
 app.use('/api/routes', api);

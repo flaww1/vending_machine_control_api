@@ -22,6 +22,29 @@ router.get('/', (req, res, next) => {
 
 });
 
+router.post('/', (req, res, next) => {
+  try {
+
+    persistence.createProducts(req.body)
+        .then((createdProduct) => {
+          if (createdProduct) {
+            res.status(200)
+                .json(createdProduct);
+
+          } else {
+            res.status(500)
+                .send(errorHandler());
+          }
+        });
+
+  } catch (e) {
+    console.log(e);
+    res.status(400)
+        .send({ message: 'Invalid data. Make sure to include every field.' });
+  }
+
+});
+
 router.get('/:productId', (req, res, next) => {
   try {
     persistence.getProductById(Number(req.params.productId))
@@ -37,32 +60,10 @@ router.get('/:productId', (req, res, next) => {
   }
 });
 
-router.post('/', (req, res, next) => {
-  try {
-
-    persistence.createProduct(req.body)
-      .then((createdProduct) => {
-        if (createdProduct) {
-          res.status(200)
-            .json(createdProduct);
-
-        } else {
-          res.status(500)
-            .send(errorHandler());
-        }
-      });
-
-  } catch (e) {
-    console.log(e);
-    res.status(400)
-      .send({ message: 'Invalid data. Make sure to include every field.' });
-  }
-
-});
 
 router.delete('/:productId', (req, res, next) => {
   try {
-    persistence.deleteProductById(Number(req.params.productId))
+    persistence.deleteProduct(Number(req.params.productId))
       .then((product) => {
         res.status(200)
           .json(product);
@@ -77,7 +78,7 @@ router.delete('/:productId', (req, res, next) => {
 
 router.put('/:productId', (req, res, next) => {
   try {
-    persistence.updateProductById(Number(req.params.productId), req.body)
+    persistence.updateProduct(Number(req.params.productId), req.body)
       .then((updatedProduct) => {
         if (updatedProduct) {
           res.status(200)
@@ -96,13 +97,6 @@ router.put('/:productId', (req, res, next) => {
   }
 
 });
-
-
-
-
-
-
-
 
 
 module.exports = router;

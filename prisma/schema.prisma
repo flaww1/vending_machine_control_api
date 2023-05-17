@@ -33,34 +33,34 @@ model Provider {
 }
 
 model Machine {
-  machineId           Int                   @id @default(autoincrement())
-  model               String?               @db.VarChar(255)
-  type                Machine_Types
-  status              Machine_Status
-  energy_mode         EnergyMode_Types
-  location            String                @db.VarChar(255)
-  adminId             Int                   @db.Int
-  admin               User                  @relation(fields: [adminId], references: [number])
+  machineId   Int              @id @default(autoincrement())
+  model       String?          @db.VarChar(255)
+  type        Machine_Types
+  status      Machine_Status
+  energy_mode EnergyMode_Types
+  location    String           @db.VarChar(255)
+  adminId     Int              @db.Int
+  admin       User             @relation(fields: [adminId], references: [number])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
-  EnergyMode          EnergyMode[]
+
   Machine_Maintenance Machine_Maintenance[]
   Order               Order[]
   Product             Product[]
   Shelf               Shelf[]
   Stock               Stock[]
   Feedback_Machine    Feedback_Machine[]
+  EnergyMode          EnergyMode[]
 }
 
 model Product {
-  productId        Int                @id @default(autoincrement())
-  name             String             @db.VarChar(255)
-  image_uri        String             @db.VarChar(1000)
-  description      String             @db.VarChar(255)
-  type             Product_Type
-  price            Float              @db.Float
-  machineId        Int                @db.Int
-  machine          Machine            @relation(fields: [machineId], references: [machineId])
+  productId   Int          @id @default(autoincrement())
+  name        String       @db.VarChar(255)
+  image_uri   String       @db.VarChar(1000)
+  description String       @db.VarChar(255)
+  type        Product_Type
+  price       Float        @db.Float
+
   Feedback         Feedback[]
   Order            Order[]
   Shelf            Shelf[]
@@ -70,6 +70,8 @@ model Product {
   Provider_Product Provider_Product[]
   Restock          Restock[]
   Wishlist         Wishlist[]
+  Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
+  machineMachineId Int?
 }
 
 model Shelf {
