@@ -9,31 +9,32 @@ datasource db {
 
 // USER
 model User {
-  number             Int                  @id @default(autoincrement()) @db.UnsignedInt
+  userId             Int                  @id @default(autoincrement()) @db.UnsignedInt
   first_name         String               @db.VarChar(255)
   last_name          String               @db.VarChar(255)
   password           String               @db.VarChar(255)
   email              String               @unique(map: "email") @db.VarChar(255)
   type               User_type
   registration_date  DateTime             @db.DateTime(0)
+  isVerified         Boolean              @default(false)
   Feedback           Feedback[]
-  Reserve_Cart       Reserve_Cart[]
+  reservation_Cart   reservation_Cart[]
   Wishlist           Wishlist[]
   Provider           Provider[]
-  Reserve_Item       Reserve_Item[]
+  reservation        Reservation[]
   Notification       Notification[]
   Machine            Machine[]
   RestockRequest     RestockRequest[]
   MaintenanceRequest MaintenanceRequest[]
 
-  @@index([number], map: "number")
+  @@index([userId], map: "userId")
 }
 
 model Provider {
   providerId         Int                  @id @default(autoincrement()) @db.UnsignedInt
-  provider           User                 @relation(fields: [providerId], references: [number])
+  provider           User                 @relation(fields: [providerId], references: [userId])
   type               Provider_type
-  phone              String               @db.VarChar(255)
+  phone              String               @db.VarChar(20)
   Address            Address[]
   RestockRequest     RestockRequest[]
   MaintenanceRequest MaintenanceRequest[]
@@ -42,7 +43,7 @@ model Provider {
 }
 
 model Address {
-  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  addressId   Int      @id @default(autoincrement()) @db.UnsignedInt
   street      String   @db.VarChar(255)
   country     String   @db.VarChar(50)
   city        String   @db.VarChar(50)
@@ -52,22 +53,20 @@ model Address {
   nif         Int      @db.UnsignedInt
   providerId  Int      @db.UnsignedInt
   provider    Provider @relation(fields: [providerId], references: [providerId])
-  is_occupied Boolean  @default(false)
-  is_billing  Boolean  @default(false)
 
   @@index([providerId], map: "providerId")
 }
 
-model Reserve_Cart {
+model reservation_Cart {
   cartId       Int     @id @default(autoincrement()) @db.UnsignedInt
   userId       Int     @db.UnsignedInt
-  user         User    @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_1")
+  user         User    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_1")
   productId    Int     @db.UnsignedInt
-  product      Product @relation(fields: [productId], references: [productId], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_2")
+  product      Product @relation(fields: [productId], references: [productId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_2")
   index        Int     @db.UnsignedInt
   quantity     Int     @db.UnsignedInt
   machineId    Int     @db.UnsignedInt
-  machine      Machine @relation(fields: [machineId], references: [machineId], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_3")
+  machine      Machine @relation(fields: [machineId], references: [machineId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_3")
   Shelf        Shelf?  @relation(fields: [shelfShelfId], references: [shelfId])
   shelfShelfId Int?    @db.UnsignedInt
 
@@ -83,19 +82,19 @@ model Machine {
   type        Machine_Types
   status      Machine_Status
   energy_mode EnergyMode_Types
-  location    String           @db.VarChar(255)
+  location    String           @db.Text
   adminId     Int              @db.UnsignedInt
-  admin       User             @relation(fields: [adminId], references: [number])
+  admin       User             @relation(fields: [adminId], references: [userId])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
 
   MaintenanceRequest MaintenanceRequest[]
   Product            Product[]
   Shelf              Shelf[]
-  Reserve_Cart       Reserve_Cart[]
+  reservation_Cart   reservation_Cart[]
   Feedback_Machine   Feedback_Machine[]
   RestockRequest     RestockRequest[]
-  Reserve_Item       Reserve_Item[]
+  reservation        Reservation[]
 }
 
 model Product {
@@ -110,8 +109,8 @@ model Product {
   Feedback         Feedback[]
   Product_Shelf    Product_Shelf[]
   Shelf            Shelf[]
-  Reserve_Item     Reserve_Item[]
-  Reserve_Cart     Reserve_Cart[]
+  reservation      Reservation[]
+  reservation_Cart reservation_Cart[]
   RestockRequest   RestockRequest[]
   Wishlist         Wishlist[]
   Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
@@ -123,15 +122,15 @@ model Product {
 }
 
 model Shelf {
-  shelfId       Int             @id @default(autoincrement()) @db.UnsignedInt
-  number        Int             @db.UnsignedInt
-  machineId     Int             @db.UnsignedInt
-  Machine       Machine         @relation(fields: [machineId], references: [machineId])
-  productId     Int             @db.UnsignedInt
-  Product       Product?        @relation(fields: [productId], references: [productId])
-  Product_Shelf Product_Shelf[]
-  Reserve_Cart  Reserve_Cart[]
-  Reserve_Item  Reserve_Item[]
+  shelfId          Int                @id @default(autoincrement()) @db.UnsignedInt
+  userId           Int                @db.UnsignedInt
+  machineId        Int                @db.UnsignedInt
+  Machine          Machine            @relation(fields: [machineId], references: [machineId])
+  productId        Int                @db.UnsignedInt
+  Product          Product?           @relation(fields: [productId], references: [productId])
+  Product_Shelf    Product_Shelf[]
+  reservation_Cart reservation_Cart[]
+  reservation      Reservation[]
 
   @@index([machineId], map: "Machine")
   @@index([productId], map: "Product")
@@ -167,7 +166,7 @@ model RestockRequest {
   providerId      Int            @db.UnsignedInt
   Provider        Provider       @relation(fields: [providerId], references: [providerId])
   adminId         Int            @db.UnsignedInt
-  Admin           User           @relation(fields: [adminId], references: [number])
+  Admin           User           @relation(fields: [adminId], references: [userId])
   status          Restock_Status
   arrival_date    DateTime       @db.DateTime(0)
   transport_price Float          @db.Float
@@ -192,7 +191,7 @@ model MaintenanceRequest {
   adminId       Int                          @db.UnsignedInt
   providerId    Int                          @db.UnsignedInt
   provider      Provider                     @relation(fields: [providerId], references: [providerId])
-  admin         User                         @relation(fields: [adminId], references: [number])
+  admin         User                         @relation(fields: [adminId], references: [userId])
   description   String                       @db.VarChar(255)
 
   @@index([machineId], map: "machine")
@@ -208,7 +207,7 @@ model Feedback {
   status           Feedback_Status
   date             DateTime           @db.DateTime(0)
   userId           Int                @db.UnsignedInt
-  User             User               @relation(fields: [userId], references: [number])
+  User             User               @relation(fields: [userId], references: [userId])
   Feedback_Machine Feedback_Machine[]
   Feedback_Product Feedback_Product[]
   Product          Product?           @relation(fields: [productId], references: [productId])
@@ -242,7 +241,7 @@ model Feedback_Product {
 model Wishlist {
   wishlistId Int     @id @default(autoincrement()) @db.UnsignedInt
   userId     Int     @db.UnsignedInt
-  user       User    @relation(fields: [userId], references: [number])
+  user       User    @relation(fields: [userId], references: [userId])
   productId  Int     @db.UnsignedInt
   product    Product @relation(fields: [productId], references: [productId])
 
@@ -260,27 +259,31 @@ model Notification {
   timestamp      DateTime           @db.DateTime(0)
   scope          Notification_scope
   userId         Int                @db.UnsignedInt
-  User           User               @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_1")
-  Reservation    Reserve_Item?      @relation(fields: [reservationId], references: [reserveId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_2")
+  User           User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_1")
+  Reservation    Reservation?       @relation(fields: [reservationId], references: [reservationId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_2")
 
   @@index([reservationId], map: "reservation")
 }
 
-model Reserve_Item {
-  reserveId      Int            @id @default(autoincrement()) @db.UnsignedInt
-  status         Reserve_Status
-  userId         Int            @db.UnsignedInt
-  user           User           @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Item_ibfk_1")
-  total_price    Decimal        @db.Decimal(10, 2)
-  quantity       Int            @db.UnsignedInt
-  productId      Int            @db.UnsignedInt
-  product        Product        @relation(fields: [productId], references: [productId])
-  machineId      Int            @db.UnsignedInt
-  machine        Machine        @relation(fields: [machineId], references: [machineId])
-  shelfId        Int            @db.UnsignedInt
-  shelf          Shelf          @relation(fields: [shelfId], references: [shelfId])
-  payment_status Payment_Status
-  Notification   Notification[]
+model Reservation {
+  reservationId Int                @id @default(autoincrement()) @db.UnsignedInt
+  status        reservation_Status
+  userId        Int                @db.UnsignedInt
+  user          User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_ibfk_1")
+  total_price   Decimal            @db.Decimal(10, 2)
+  quantity      Int                @db.UnsignedInt
+  productId     Int                @db.UnsignedInt
+  product       Product            @relation(fields: [productId], references: [productId])
+  machineId     Int                @db.UnsignedInt
+  machine       Machine            @relation(fields: [machineId], references: [machineId])
+  shelfId       Int                @db.UnsignedInt
+  shelf         Shelf              @relation(fields: [shelfId], references: [shelfId])
+  code          String             @unique
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  paymentStatus Payment_Status
+  paymentMethod Payment_Method
+  Notification  Notification[]
 }
 
 enum User_type {
@@ -324,7 +327,7 @@ enum Product_Type {
   OTHER
 }
 
-enum Reserve_Status {
+enum reservation_Status {
   PENDING
   COMPLETED
   CANCELED
@@ -374,4 +377,9 @@ enum Notification_scope {
   COMPLETE
   FAILURE
   CANCELED
+}
+
+enum Payment_Method {
+  MACHINE
+  APP
 }

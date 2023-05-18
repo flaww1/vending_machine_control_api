@@ -24,32 +24,11 @@ router.get('/', (req, res, next) => {
     }
 });
 // This route only requires an authorization.check when it comes to creating new administrators
-router.post('/createUser' , authorization.check, createUserValidator() , (req, res, next) => {
-    try {
-
-        persistence.createUser(req.body)
-            .then((createdUser) => {
-                if (createdUser) {
-                    res.status(200)
-                        .json(createdUser);
-
-                } else {
-                    res.status(500)
-                        .send(errorHandler());
-                }
-            });
-
-    } catch (e) {
-        console.log(e);
-        res.status(400)
-            .send({message: 'Invalid data. Make sure to include every field.'});
-    }
-});
 
 
 router.get('/:userId', authentication.check, authorization.check, (req, res, next) => {
     try {
-        persistence.getUserByNumber(Number(req.params.userId))
+        persistence.getUserByuserId(userId(req.params.userId))
             .then((user) => {
                 res.status(200)
                     .json(user);
@@ -64,7 +43,7 @@ router.get('/:userId', authentication.check, authorization.check, (req, res, nex
 
 router.get('/:userEmail', (req, res, next) => {
     try {
-        persistence.getUserByEmail(Number(req.params.email))
+        persistence.getUserByEmail(userId(req.params.email))
             .then((user) => {
                 res.status(200)
                     .json(user);
@@ -79,7 +58,7 @@ router.get('/:userEmail', (req, res, next) => {
 
 router.put('/:userId', (req, res, next) => {
     try {
-        persistence.updateUser(Number(req.params.userId), req.body)
+        persistence.updateUser(userId(req.params.userId), req.body)
             .then((updatedUser) => {
                 res.status(200)
                     .json(updatedUser);
@@ -94,7 +73,7 @@ router.put('/:userId', (req, res, next) => {
 
 router.delete('/:userId', (req, res, next) => {
     try {
-        persistence.deleteUser(Number(req.params.userId))
+        persistence.deleteUser(userId(req.params.userId))
             .then((deletedUser) => {
                 res.status(200)
                     .json(deletedUser);

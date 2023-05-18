@@ -2,9 +2,14 @@
 const express = require('express');
 const morgan = require('morgan');
 const session = require('express-session');
-
+const fs = require('fs');
+const path = require('path');
+const logger = require('../lib/logger');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+
+
+
 
 require('dotenv').config();
 
@@ -12,7 +17,9 @@ const middlewares = require('../lib/error');
 const api = require('../api/routes');
 const passport = require('../lib/authentication').passport;
 
+
 const app = express();
+app.use(logger);
 
 app.use(morgan('dev'));
 
@@ -55,6 +62,10 @@ const feedbackRoutes = require('../api/routes/feedbacks');
 const authRoutes = require('../api/routes/auth');
 const productRoutes = require('../api/routes/products');
 const userRoutes = require('../api/routes/users');
+const emailRoutes = require('../api/routes/email');
+const indexRoutes = require('../api/routes/index');
+const passwordRoutes = require('../api/routes/password');
+const feedback = require('../api/routes/feedbacks');
 
 
 
@@ -63,6 +74,11 @@ app.use('/feedbacks', feedbackRoutes);
 app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
 app.use('/users', userRoutes);
+app.use('/email', emailRoutes);
+app.use('/index', indexRoutes);
+app.use('/password', passwordRoutes);
+app.use('/feedback', feedback);
+
 
 
 app.use('/api/routes', api);

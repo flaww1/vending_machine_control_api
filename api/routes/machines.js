@@ -44,7 +44,7 @@ router.post('/', (req, res, next) => {
 
 router.get('/:machineId', (req, res, next) => {
     try {
-        persistence.getMachineById(Number(req.params.machineId))
+        persistence.getMachineById(userId(req.params.machineId))
             .then((machine) => {
                 res.status(200)
                     .json(machine);
@@ -59,7 +59,7 @@ router.get('/:machineId', (req, res, next) => {
 
 router.put('/:machineId', (req, res, next) => {
     try {
-        persistence.updateMachine(Number(req.params.machineId), req.body)
+        persistence.updateMachine(userId(req.params.machineId), req.body)
             .then((success) => {
                 if (success) {
                     res.status(200)
@@ -80,7 +80,7 @@ router.put('/:machineId', (req, res, next) => {
 router.delete('/:machineId', (req, res, next) => {
 
     try {
-        persistence.deleteMachine(Number(req.params.machineId))
+        persistence.deleteMachine(userId(req.params.machineId))
             .then((success) => {
                 if (success) {
                     res.status(200)

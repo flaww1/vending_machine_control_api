@@ -9,8 +9,6 @@
     "lint": "eslint --fix server/src",
     "test": "jest"
   },
-
-
   "keywords": [],
   "author": "Flávio Pereira a21110",
   "repository": {
@@ -36,7 +34,9 @@
     "nodemailer": "^6.9.2",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
-    "passport-local": "^1.0.0"
+    "passport-local": "^1.0.0",
+    "stripe": "^12.5.0",
+    "winston": "^3.8.2"
   },
   "devDependencies": {
     "@types/node": "^20.1.2",
