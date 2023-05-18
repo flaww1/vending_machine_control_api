@@ -9,186 +9,278 @@ datasource db {
 
 // USER
 model User {
-  number              Int                   @id @default(autoincrement())
-  first_name          String                @db.VarChar(255)
-  last_name           String                @db.VarChar(255)
-  password            String                @db.VarChar(255)
-  email               String                @unique(map: "email") @db.VarChar(255)
-  type                User_type
-  registration_date   DateTime              @db.DateTime(0)
-  Feedback            Feedback[]
-  Order               Order[]
-  Wishlist            Wishlist[]
-  Provider            Provider[]
-  Machine             Machine[]
-  Machine_Maintenance Machine_Maintenance[]
+  number             Int                  @id @default(autoincrement()) @db.UnsignedInt
+  first_name         String               @db.VarChar(255)
+  last_name          String               @db.VarChar(255)
+  password           String               @db.VarChar(255)
+  email              String               @unique(map: "email") @db.VarChar(255)
+  type               User_type
+  registration_date  DateTime             @db.DateTime(0)
+  Feedback           Feedback[]
+  Reserve_Cart       Reserve_Cart[]
+  Wishlist           Wishlist[]
+  Provider           Provider[]
+  Reserve_Item       Reserve_Item[]
+  Notification       Notification[]
+  Machine            Machine[]
+  RestockRequest     RestockRequest[]
+  MaintenanceRequest MaintenanceRequest[]
+
+  @@index([number], map: "number")
 }
 
 model Provider {
-  providerId       Int                @id @default(autoincrement())
-  provider         User               @relation(fields: [providerId], references: [number])
-  type             Provider_type
-  Restock          Restock[]
-  Provider_Product Provider_Product[]
+  providerId         Int                  @id @default(autoincrement()) @db.UnsignedInt
+  provider           User                 @relation(fields: [providerId], references: [number])
+  type               Provider_type
+  phone              String               @db.VarChar(255)
+  Address            Address[]
+  RestockRequest     RestockRequest[]
+  MaintenanceRequest MaintenanceRequest[]
+
+  @@index([providerId], map: "providerId")
+}
+
+model Address {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  street      String   @db.VarChar(255)
+  country     String   @db.VarChar(50)
+  city        String   @db.VarChar(50)
+  latitude    Decimal  @db.Decimal(8, 6)
+  longitude   Decimal  @db.Decimal(9, 6)
+  postal_code String   @db.VarChar(10)
+  nif         Int      @db.UnsignedInt
+  providerId  Int      @db.UnsignedInt
+  provider    Provider @relation(fields: [providerId], references: [providerId])
+  is_occupied Boolean  @default(false)
+  is_billing  Boolean  @default(false)
+
+  @@index([providerId], map: "providerId")
+}
+
+model Reserve_Cart {
+  cartId       Int     @id @default(autoincrement()) @db.UnsignedInt
+  userId       Int     @db.UnsignedInt
+  user         User    @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_1")
+  productId    Int     @db.UnsignedInt
+  product      Product @relation(fields: [productId], references: [productId], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_2")
+  index        Int     @db.UnsignedInt
+  quantity     Int     @db.UnsignedInt
+  machineId    Int     @db.UnsignedInt
+  machine      Machine @relation(fields: [machineId], references: [machineId], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Cart_ibfk_3")
+  Shelf        Shelf?  @relation(fields: [shelfShelfId], references: [shelfId])
+  shelfShelfId Int?    @db.UnsignedInt
+
+  @@index([userId], map: "user")
+  @@index([productId], map: "product")
+  @@index([machineId], map: "machine")
 }
 
 model Machine {
-  machineId   Int              @id @default(autoincrement())
-  model       String?          @db.VarChar(255)
+  machineId   Int              @id @default(autoincrement()) @db.UnsignedInt
+  modelId     Int              @db.UnsignedInt
+  model       MachineModel     @relation(fields: [modelId], references: [modelId])
   type        Machine_Types
   status      Machine_Status
   energy_mode EnergyMode_Types
   location    String           @db.VarChar(255)
-  adminId     Int              @db.Int
+  adminId     Int              @db.UnsignedInt
   admin       User             @relation(fields: [adminId], references: [number])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
 
-  Machine_Maintenance Machine_Maintenance[]
-  Order               Order[]
-  Product             Product[]
-  Shelf               Shelf[]
-  Stock               Stock[]
-  Feedback_Machine    Feedback_Machine[]
-  EnergyMode          EnergyMode[]
+  MaintenanceRequest MaintenanceRequest[]
+  Product            Product[]
+  Shelf              Shelf[]
+  Reserve_Cart       Reserve_Cart[]
+  Feedback_Machine   Feedback_Machine[]
+  RestockRequest     RestockRequest[]
+  Reserve_Item       Reserve_Item[]
 }
 
 model Product {
-  productId   Int          @id @default(autoincrement())
-  name        String       @db.VarChar(255)
-  image_uri   String       @db.VarChar(1000)
-  description String       @db.VarChar(255)
-  type        Product_Type
-  price       Float        @db.Float
+  productId       Int          @id @default(autoincrement()) @db.UnsignedInt
+  name            String       @db.VarChar(255)
+  image_uri       String       @db.VarChar(1000)
+  description     String       @db.VarChar(255)
+  type            Product_Type
+  price           Float        @db.Float
+  expiration_date DateTime     @db.Date
 
   Feedback         Feedback[]
-  Order            Order[]
-  Shelf            Shelf[]
   Product_Shelf    Product_Shelf[]
-  Stock            Stock[]
-  Feedback_Product Feedback_Product[]
-  Provider_Product Provider_Product[]
-  Restock          Restock[]
+  Shelf            Shelf[]
+  Reserve_Item     Reserve_Item[]
+  Reserve_Cart     Reserve_Cart[]
+  RestockRequest   RestockRequest[]
   Wishlist         Wishlist[]
   Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
-  machineMachineId Int?
+  machineMachineId Int?               @db.UnsignedInt
+  Feedback_Product Feedback_Product[]
+
+  @@index([name], map: "name")
+  @@index([productId], map: "productId")
 }
 
 model Shelf {
-  shelfId       Int             @id @default(autoincrement())
-  number        Int             @db.Int
-  machineId     Int             @db.Int
-  productId     Int?            @db.Int
+  shelfId       Int             @id @default(autoincrement()) @db.UnsignedInt
+  number        Int             @db.UnsignedInt
+  machineId     Int             @db.UnsignedInt
   Machine       Machine         @relation(fields: [machineId], references: [machineId])
+  productId     Int             @db.UnsignedInt
   Product       Product?        @relation(fields: [productId], references: [productId])
-  slot_count    Int             @db.Int
   Product_Shelf Product_Shelf[]
+  Reserve_Cart  Reserve_Cart[]
+  Reserve_Item  Reserve_Item[]
+
+  @@index([machineId], map: "Machine")
+  @@index([productId], map: "Product")
+}
+
+model MachineModel {
+  modelId       Int       @id @default(autoincrement()) @db.UnsignedInt
+  model         String    @db.VarChar(255)
+  shelfQuantity Int       @db.UnsignedInt
+  shelfCapacity Int       @db.UnsignedInt
+  Machine       Machine[]
 }
 
 model Product_Shelf {
-  product_shelfId Int     @id @default(autoincrement())
-  shelf           Shelf   @relation(fields: [product_shelfId], references: [shelfId])
-  productId       Int     @db.Int
+  product_shelfId Int     @id @default(autoincrement()) @db.UnsignedInt
+  shelfId         Int     @db.UnsignedInt
+  shelf           Shelf   @relation(fields: [shelfId], references: [shelfId])
+  productId       Int     @db.UnsignedInt
   product         Product @relation(fields: [productId], references: [productId])
-  quantity_inSlot Int     @db.Int
+  quantity_inSlot Int     @db.UnsignedInt
+
+  @@index([shelfId], map: "shelf")
+  @@index([productId], map: "product")
 }
 
-model Stock {
-  stockId   Int     @id @default(autoincrement())
-  machineId Int     @db.Int
-  machine   Machine @relation(fields: [machineId], references: [machineId])
-  productId Int     @db.Int
-  Product   Product @relation(fields: [productId], references: [productId])
-  quantity  Int     @db.Int
+model RestockRequest {
+  restockId       Int            @id @default(autoincrement()) @db.UnsignedInt
+  machineId       Int            @db.UnsignedInt
+  Machine         Machine        @relation(fields: [machineId], references: [machineId])
+  productId       Int            @db.UnsignedInt
+  Product         Product        @relation(fields: [productId], references: [productId])
+  quantity        Int            @db.UnsignedInt
+  providerId      Int            @db.UnsignedInt
+  Provider        Provider       @relation(fields: [providerId], references: [providerId])
+  adminId         Int            @db.UnsignedInt
+  Admin           User           @relation(fields: [adminId], references: [number])
+  status          Restock_Status
+  arrival_date    DateTime       @db.DateTime(0)
+  transport_price Float          @db.Float
+  restock_price   Float          @db.Float
+  date            DateTime       @db.DateTime(0)
+  observations    String?        @db.VarChar(255)
+
+  @@index([machineId], map: "machine")
+  @@index([productId], map: "product")
+  @@index([providerId], map: "provider")
+  @@index([adminId], map: "admin")
 }
 
-model Order {
-  orderId   Int          @id @default(autoincrement())
-  status    Order_Status
-  date      DateTime     @db.DateTime(0)
-  cost      Float        @db.Float
-  userId    Int          @db.Int
-  user      User         @relation(fields: [userId], references: [number])
-  machine   Machine      @relation(fields: [machineId], references: [machineId])
-  machineId Int          @db.Int
-  Product   Product      @relation(fields: [productId], references: [productId])
-  productId Int          @db.Int
+model MaintenanceRequest {
+  maintenanceId Int                          @id @default(autoincrement()) @db.UnsignedInt
+  type          Machine_Maintenance_Type
+  priority      Machine_Maintenance_Priority
+  status        Machine_Maintenance_Status
+  date          DateTime                     @db.DateTime(0)
+  machineId     Int                          @db.UnsignedInt
+  machine       Machine                      @relation(fields: [machineId], references: [machineId])
+  adminId       Int                          @db.UnsignedInt
+  providerId    Int                          @db.UnsignedInt
+  provider      Provider                     @relation(fields: [providerId], references: [providerId])
+  admin         User                         @relation(fields: [adminId], references: [number])
+  description   String                       @db.VarChar(255)
+
+  @@index([machineId], map: "machine")
+  @@index([providerId], map: "provider")
+  @@index([adminId], map: "admin")
 }
 
 model Feedback {
-  feedbackId       Int                @id @default(autoincrement())
+  feedbackId       Int                @id @default(autoincrement()) @db.UnsignedInt
   title            String             @db.VarChar(255)
   description      String             @db.VarChar(255)
   type             Feedback_Type
   status           Feedback_Status
   date             DateTime           @db.DateTime(0)
-  userId           Int                @db.Int
-  user             User               @relation(fields: [userId], references: [number])
-  Product          Product?           @relation(fields: [productProductId], references: [productId])
-  productProductId Int?
+  userId           Int                @db.UnsignedInt
+  User             User               @relation(fields: [userId], references: [number])
   Feedback_Machine Feedback_Machine[]
   Feedback_Product Feedback_Product[]
+  Product          Product?           @relation(fields: [productId], references: [productId])
+  productId        Int?               @db.UnsignedInt
+
+  @@index([userId], map: "user")
 }
 
 model Feedback_Machine {
-  feedback_machineId Int      @id @default(autoincrement())
-  feedbackId         Int      @db.Int
+  feedback_machineId Int      @id @default(autoincrement()) @db.UnsignedInt
+  feedbackId         Int      @db.UnsignedInt
   feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
-  machineId          Int      @db.Int
+  machineId          Int      @db.UnsignedInt
   machine            Machine  @relation(fields: [machineId], references: [machineId])
+
+  @@index([machineId], map: "machine")
+  @@index([feedbackId], map: "feedback")
 }
 
 model Feedback_Product {
-  feedback_productId Int      @id @default(autoincrement())
-  feedbackId         Int      @db.Int
+  feedback_productId Int      @id @default(autoincrement()) @db.UnsignedInt
+  feedbackId         Int      @db.UnsignedInt
   feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
-  productId          Int      @db.Int
+  productId          Int      @db.UnsignedInt
   product            Product  @relation(fields: [productId], references: [productId])
-}
 
-model EnergyMode {
-  energymodeId Int              @id @default(autoincrement())
-  type         EnergyMode_Types
-  machineId    Int              @db.Int
-  machine      Machine          @relation(fields: [machineId], references: [machineId])
-}
-
-model Provider_Product {
-  provider_productId Int      @id @default(autoincrement())
-  providerId         Int      @db.Int
-  provider           Provider @relation(fields: [providerId], references: [providerId])
-  productId          Int      @db.Int
-  product            Product  @relation(fields: [productId], references: [productId])
-}
-
-model Restock {
-  restockId  Int      @id @default(autoincrement())
-  date       DateTime @db.DateTime(0)
-  providerId Int      @db.Int
-  provider   Provider @relation(fields: [providerId], references: [providerId])
-  productId  Int      @db.Int
-  product    Product  @relation(fields: [productId], references: [productId])
-  quantity   Int      @db.Int
-}
-
-model Machine_Maintenance {
-  machine_maintenanceId Int                          @id @default(autoincrement())
-  type                  Machine_Maintenance_Type
-  userId                Int                          @db.Int
-  user                  User                         @relation(fields: [userId], references: [number])
-  priority              Machine_Maintenance_Priority
-  status                Machine_Maintenance_Status
-  date                  DateTime                     @db.DateTime(0)
-  machineId             Int                          @db.Int
-  machine               Machine                      @relation(fields: [machineId], references: [machineId])
+  @@index([productId], map: "product")
+  @@index([feedbackId], map: "feedback")
 }
 
 model Wishlist {
-  wishlistId Int     @id @default(autoincrement())
-  userId     Int     @db.Int
+  wishlistId Int     @id @default(autoincrement()) @db.UnsignedInt
+  userId     Int     @db.UnsignedInt
   user       User    @relation(fields: [userId], references: [number])
-  productId  Int     @db.Int
+  productId  Int     @db.UnsignedInt
   product    Product @relation(fields: [productId], references: [productId])
+
+  @@index([userId], map: "user")
+  @@index([productId], map: "product")
+}
+
+model Notification {
+  notificationId Int                @id @default(autoincrement()) @db.UnsignedInt
+  user           Int                @db.UnsignedInt
+  title          String             @db.VarChar(255)
+  reservationId  Int?               @db.UnsignedInt
+  content        String             @db.VarChar(255)
+  dismissed      Boolean            @default(false)
+  timestamp      DateTime           @db.DateTime(0)
+  scope          Notification_scope
+  userId         Int                @db.UnsignedInt
+  User           User               @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_1")
+  Reservation    Reserve_Item?      @relation(fields: [reservationId], references: [reserveId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_2")
+
+  @@index([reservationId], map: "reservation")
+}
+
+model Reserve_Item {
+  reserveId      Int            @id @default(autoincrement()) @db.UnsignedInt
+  status         Reserve_Status
+  userId         Int            @db.UnsignedInt
+  user           User           @relation(fields: [userId], references: [number], onDelete: Cascade, onUpdate: NoAction, map: "Reserve_Item_ibfk_1")
+  total_price    Decimal        @db.Decimal(10, 2)
+  quantity       Int            @db.UnsignedInt
+  productId      Int            @db.UnsignedInt
+  product        Product        @relation(fields: [productId], references: [productId])
+  machineId      Int            @db.UnsignedInt
+  machine        Machine        @relation(fields: [machineId], references: [machineId])
+  shelfId        Int            @db.UnsignedInt
+  shelf          Shelf          @relation(fields: [shelfId], references: [shelfId])
+  payment_status Payment_Status
+  Notification   Notification[]
 }
 
 enum User_type {
@@ -232,7 +324,14 @@ enum Product_Type {
   OTHER
 }
 
-enum Order_Status {
+enum Reserve_Status {
+  PENDING
+  COMPLETED
+  CANCELED
+  REFUNDED
+}
+
+enum Payment_Status {
   PENDING
   COMPLETED
   CANCELED
@@ -260,4 +359,19 @@ enum Machine_Maintenance_Priority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum Restock_Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Notification_scope {
+  AWAITING_PAYMENT
+  PROCESSING
+  DROPPING
+  COMPLETE
+  FAILURE
+  CANCELED
 }

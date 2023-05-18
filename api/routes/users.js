@@ -1,24 +1,30 @@
 const express = require('express');
 const persistence = require('../../lib/persistence');
 const {errorHandler} = require('../../lib/error');
-
+const validator = require('../../lib/validation.js');
+const authentication = require('../../lib/authentication');
+const authorization = require('../../lib/authorization');
+const {createUserValidator} = require("../../lib/validation");
 
 const router = express.Router();
 
 router.get('/', (req, res, next) => {
     try {
         persistence.getAllUsers()
-            .then((userData) => {
+            .then((users) => {
                 res.status(200)
-                    .json(userData);
+                    .json(users);
             });
+
     } catch (e) {
         console.log(e);
         res.status(500)
             .send(errorHandler());
+
     }
 });
-router.post('/createUser', (req, res, next) => {
+// This route only requires an authorization.check when it comes to creating new administrators
+router.post('/createUser' , authorization.check, createUserValidator() , (req, res, next) => {
     try {
 
         persistence.createUser(req.body)
@@ -41,7 +47,7 @@ router.post('/createUser', (req, res, next) => {
 });
 
 
-router.get('/:userId', (req, res, next) => {
+router.get('/:userId', authentication.check, authorization.check, (req, res, next) => {
     try {
         persistence.getUserByNumber(Number(req.params.userId))
             .then((user) => {
@@ -100,8 +106,6 @@ router.delete('/:userId', (req, res, next) => {
             .send(errorHandler());
     }
 });
-
-
 
 
 module.exports = router;
