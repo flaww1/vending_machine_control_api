@@ -1,14 +1,13 @@
 // Imports
 const express = require('express');
 const router = express.Router();
-const logger = require('../lib/logger');
+
 const passport = require('../../src/app').passport;
 const jwt = require("jsonwebtoken");
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 const authorization = require('../../lib/authorization');
-
 
 
 const {loginValidator, createUserValidator} = require('../../lib/validation');
@@ -17,15 +16,13 @@ const {
 } = require('../../lib/error');
 const authentication = require('../../lib/authentication');
 
-const {limiter, bruteForceProtection} = require('../../lib/rate-limiting');
+const {limiter, bruteForceProtection} = require('../../lib/rateLimiter');
 const {getUserByEmail, createUser} = require("../../lib/persistence");
 
 router.all('*', cors({origin: '*'}));
 
 /* Returns JWT token to use if everything goes well, returns error messages otherwise. */
-router.post('/login', limiter, bruteForceProtection, authentication.check, loginValidator(), async (req, res, next) => {
-
-    logger.info('User login attempt: ' + req.body.email);
+router.post('/login', loginValidator(), async (req, res, next) => {
     passport.authenticate('basic-login', async (err, user, info) => {
         try {
             if (err) {
@@ -33,7 +30,7 @@ router.post('/login', limiter, bruteForceProtection, authentication.check, login
                 return res.status(500).send(errorHandler())
             }
             if (!user) {
-                logger.error('Failed login attempt for user: ' + req.body.email);
+
                 // If the authentication goes wrong
                 return res.status(401).send(info)
             }
@@ -63,7 +60,7 @@ router.post('/login', limiter, bruteForceProtection, authentication.check, login
                 });
             });
         } catch (error) {
-            logger.error('An error occurred during login: ' + error);
+
             return next(error);
         }
     })(req, res, next);
@@ -97,36 +94,49 @@ router.get('/protected-route', authentication.check, (req, res) => {
 });
 
 
-router.post('/register', authorization.check, createUserValidator() ,async (req, res, next) => {
-    const { email, password } = req.body;
+router.post('/register', createUserValidator(), async (req, res, next) => {
+    const {email, password} = req.body;
 
     try {
         // Check if the email already exists in the database
         const existingUser = await getUserByEmail(email, false);
         if (existingUser) {
-            return res.status(400).json({ message: 'Email already exists.' });
+            return res.status(400).json({message: 'Email already exists.'});
         }
 
+        // Generate a salt for password hashing
+        const saltRounds = 10;
+        const salt = bcrypt.genSaltSync(saltRounds);
+
         // Hash the password
-        const hashedPassword = bcrypt.hashSync(password, 10);
+        const hashedPassword = bcrypt.hashSync(password, salt);
 
         // Create the user
-        const newUser = await createUser(email, hashedPassword);
+        const newUser = await createUser({
+            first_name: req.body.first_name,
+            last_name: req.body.last_name,
+            password: hashedPassword,
+            email: email,
+            type: req.body.type,
+
+            // Add other properties as needed
+        });
 
         // Generate a new JWT token for the registered user
         const token = jwt.sign(
-            { user: { userId: newUser.userId, email: newUser.email } },
+            {user: {userId: newUser.id, email: newUser.email}},
             process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION }
+            {expiresIn: process.env.JWT_EXPIRATION}
         );
 
         return res.json({
             token: token,
-            userId: newUser.userId
+            userId: newUser.id,
         });
     } catch (error) {
         return next(error);
     }
 });
+
 
 module.exports = router;

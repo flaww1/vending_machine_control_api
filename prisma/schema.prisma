@@ -9,7 +9,7 @@ datasource db {
 
 // USER
 model User {
-  userId             Int                  @id @default(autoincrement()) @db.UnsignedInt
+  userId             Int                  @id @default(autoincrement())
   first_name         String               @db.VarChar(255)
   last_name          String               @db.VarChar(255)
   password           String               @db.VarChar(255)
@@ -31,7 +31,7 @@ model User {
 }
 
 model Provider {
-  providerId         Int                  @id @default(autoincrement()) @db.UnsignedInt
+  providerId         Int                  @id @default(autoincrement())
   provider           User                 @relation(fields: [providerId], references: [userId])
   type               Provider_type
   phone              String               @db.VarChar(20)
@@ -43,32 +43,32 @@ model Provider {
 }
 
 model Address {
-  addressId   Int      @id @default(autoincrement()) @db.UnsignedInt
+  addressId   Int      @id @default(autoincrement())
   street      String   @db.VarChar(255)
   country     String   @db.VarChar(50)
   city        String   @db.VarChar(50)
   latitude    Decimal  @db.Decimal(8, 6)
   longitude   Decimal  @db.Decimal(9, 6)
   postal_code String   @db.VarChar(10)
-  nif         Int      @db.UnsignedInt
-  providerId  Int      @db.UnsignedInt
+  nif         Int
+  providerId  Int
   provider    Provider @relation(fields: [providerId], references: [providerId])
 
   @@index([providerId], map: "providerId")
 }
 
 model reservation_Cart {
-  cartId       Int     @id @default(autoincrement()) @db.UnsignedInt
-  userId       Int     @db.UnsignedInt
+  cartId       Int     @id @default(autoincrement())
+  userId       Int
   user         User    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_1")
-  productId    Int     @db.UnsignedInt
+  productId    Int
   product      Product @relation(fields: [productId], references: [productId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_2")
-  index        Int     @db.UnsignedInt
-  quantity     Int     @db.UnsignedInt
-  machineId    Int     @db.UnsignedInt
+  index        Int
+  quantity     Int
+  machineId    Int
   machine      Machine @relation(fields: [machineId], references: [machineId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_3")
   Shelf        Shelf?  @relation(fields: [shelfShelfId], references: [shelfId])
-  shelfShelfId Int?    @db.UnsignedInt
+  shelfShelfId Int?
 
   @@index([userId], map: "user")
   @@index([productId], map: "product")
@@ -76,14 +76,14 @@ model reservation_Cart {
 }
 
 model Machine {
-  machineId   Int              @id @default(autoincrement()) @db.UnsignedInt
-  modelId     Int              @db.UnsignedInt
+  machineId   Int              @id @default(autoincrement())
+  modelId     Int
   model       MachineModel     @relation(fields: [modelId], references: [modelId])
   type        Machine_Types
   status      Machine_Status
   energy_mode EnergyMode_Types
   location    String           @db.Text
-  adminId     Int              @db.UnsignedInt
+  adminId     Int
   admin       User             @relation(fields: [adminId], references: [userId])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
@@ -98,7 +98,7 @@ model Machine {
 }
 
 model Product {
-  productId       Int          @id @default(autoincrement()) @db.UnsignedInt
+  productId       Int          @id @default(autoincrement())
   name            String       @db.VarChar(255)
   image_uri       String       @db.VarChar(1000)
   description     String       @db.VarChar(255)
@@ -114,7 +114,7 @@ model Product {
   RestockRequest   RestockRequest[]
   Wishlist         Wishlist[]
   Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
-  machineMachineId Int?               @db.UnsignedInt
+  machineMachineId Int?
   Feedback_Product Feedback_Product[]
 
   @@index([name], map: "name")
@@ -122,11 +122,11 @@ model Product {
 }
 
 model Shelf {
-  shelfId          Int                @id @default(autoincrement()) @db.UnsignedInt
-  userId           Int                @db.UnsignedInt
-  machineId        Int                @db.UnsignedInt
+  shelfId          Int                @id @default(autoincrement())
+  userId           Int
+  machineId        Int
   Machine          Machine            @relation(fields: [machineId], references: [machineId])
-  productId        Int                @db.UnsignedInt
+  productId        Int
   Product          Product?           @relation(fields: [productId], references: [productId])
   Product_Shelf    Product_Shelf[]
   reservation_Cart reservation_Cart[]
@@ -137,35 +137,35 @@ model Shelf {
 }
 
 model MachineModel {
-  modelId       Int       @id @default(autoincrement()) @db.UnsignedInt
+  modelId       Int       @id @default(autoincrement())
   model         String    @db.VarChar(255)
-  shelfQuantity Int       @db.UnsignedInt
-  shelfCapacity Int       @db.UnsignedInt
+  shelfQuantity Int
+  shelfCapacity Int
   Machine       Machine[]
 }
 
 model Product_Shelf {
-  product_shelfId Int     @id @default(autoincrement()) @db.UnsignedInt
-  shelfId         Int     @db.UnsignedInt
+  product_shelfId Int     @id @default(autoincrement())
+  shelfId         Int
   shelf           Shelf   @relation(fields: [shelfId], references: [shelfId])
-  productId       Int     @db.UnsignedInt
+  productId       Int
   product         Product @relation(fields: [productId], references: [productId])
-  quantity_inSlot Int     @db.UnsignedInt
+  quantity_inSlot Int
 
   @@index([shelfId], map: "shelf")
   @@index([productId], map: "product")
 }
 
 model RestockRequest {
-  restockId       Int            @id @default(autoincrement()) @db.UnsignedInt
-  machineId       Int            @db.UnsignedInt
+  restockId       Int            @id @default(autoincrement())
+  machineId       Int
   Machine         Machine        @relation(fields: [machineId], references: [machineId])
-  productId       Int            @db.UnsignedInt
+  productId       Int
   Product         Product        @relation(fields: [productId], references: [productId])
-  quantity        Int            @db.UnsignedInt
-  providerId      Int            @db.UnsignedInt
+  quantity        Int
+  providerId      Int
   Provider        Provider       @relation(fields: [providerId], references: [providerId])
-  adminId         Int            @db.UnsignedInt
+  adminId         Int
   Admin           User           @relation(fields: [adminId], references: [userId])
   status          Restock_Status
   arrival_date    DateTime       @db.DateTime(0)
@@ -181,15 +181,15 @@ model RestockRequest {
 }
 
 model MaintenanceRequest {
-  maintenanceId Int                          @id @default(autoincrement()) @db.UnsignedInt
+  maintenanceId Int                          @id @default(autoincrement())
   type          Machine_Maintenance_Type
   priority      Machine_Maintenance_Priority
   status        Machine_Maintenance_Status
   date          DateTime                     @db.DateTime(0)
-  machineId     Int                          @db.UnsignedInt
+  machineId     Int
   machine       Machine                      @relation(fields: [machineId], references: [machineId])
-  adminId       Int                          @db.UnsignedInt
-  providerId    Int                          @db.UnsignedInt
+  adminId       Int
+  providerId    Int
   provider      Provider                     @relation(fields: [providerId], references: [providerId])
   admin         User                         @relation(fields: [adminId], references: [userId])
   description   String                       @db.VarChar(255)
@@ -200,27 +200,27 @@ model MaintenanceRequest {
 }
 
 model Feedback {
-  feedbackId       Int                @id @default(autoincrement()) @db.UnsignedInt
+  feedbackId       Int                @id @default(autoincrement())
   title            String             @db.VarChar(255)
   description      String             @db.VarChar(255)
   type             Feedback_Type
   status           Feedback_Status
   date             DateTime           @db.DateTime(0)
-  userId           Int                @db.UnsignedInt
+  userId           Int
   User             User               @relation(fields: [userId], references: [userId])
   Feedback_Machine Feedback_Machine[]
   Feedback_Product Feedback_Product[]
   Product          Product?           @relation(fields: [productId], references: [productId])
-  productId        Int?               @db.UnsignedInt
+  productId        Int?
 
   @@index([userId], map: "user")
 }
 
 model Feedback_Machine {
-  feedback_machineId Int      @id @default(autoincrement()) @db.UnsignedInt
-  feedbackId         Int      @db.UnsignedInt
+  feedback_machineId Int      @id @default(autoincrement())
+  feedbackId         Int
   feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
-  machineId          Int      @db.UnsignedInt
+  machineId          Int
   machine            Machine  @relation(fields: [machineId], references: [machineId])
 
   @@index([machineId], map: "machine")
@@ -228,10 +228,10 @@ model Feedback_Machine {
 }
 
 model Feedback_Product {
-  feedback_productId Int      @id @default(autoincrement()) @db.UnsignedInt
-  feedbackId         Int      @db.UnsignedInt
+  feedback_productId Int      @id @default(autoincrement())
+  feedbackId         Int
   feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
-  productId          Int      @db.UnsignedInt
+  productId          Int
   product            Product  @relation(fields: [productId], references: [productId])
 
   @@index([productId], map: "product")
@@ -239,10 +239,10 @@ model Feedback_Product {
 }
 
 model Wishlist {
-  wishlistId Int     @id @default(autoincrement()) @db.UnsignedInt
-  userId     Int     @db.UnsignedInt
+  wishlistId Int     @id @default(autoincrement())
+  userId     Int
   user       User    @relation(fields: [userId], references: [userId])
-  productId  Int     @db.UnsignedInt
+  productId  Int
   product    Product @relation(fields: [productId], references: [productId])
 
   @@index([userId], map: "user")
@@ -250,15 +250,15 @@ model Wishlist {
 }
 
 model Notification {
-  notificationId Int                @id @default(autoincrement()) @db.UnsignedInt
-  user           Int                @db.UnsignedInt
+  notificationId Int                @id @default(autoincrement())
+  user           Int
   title          String             @db.VarChar(255)
-  reservationId  Int?               @db.UnsignedInt
+  reservationId  Int?
   content        String             @db.VarChar(255)
   dismissed      Boolean            @default(false)
   timestamp      DateTime           @db.DateTime(0)
   scope          Notification_scope
-  userId         Int                @db.UnsignedInt
+  userId         Int
   User           User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_1")
   Reservation    Reservation?       @relation(fields: [reservationId], references: [reservationId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_2")
 
@@ -266,17 +266,17 @@ model Notification {
 }
 
 model Reservation {
-  reservationId Int                @id @default(autoincrement()) @db.UnsignedInt
+  reservationId Int                @id @default(autoincrement())
   status        reservation_Status
-  userId        Int                @db.UnsignedInt
+  userId        Int
   user          User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_ibfk_1")
   total_price   Decimal            @db.Decimal(10, 2)
-  quantity      Int                @db.UnsignedInt
-  productId     Int                @db.UnsignedInt
+  quantity      Int
+  productId     Int
   product       Product            @relation(fields: [productId], references: [productId])
-  machineId     Int                @db.UnsignedInt
+  machineId     Int
   machine       Machine            @relation(fields: [machineId], references: [machineId])
-  shelfId       Int                @db.UnsignedInt
+  shelfId       Int
   shelf         Shelf              @relation(fields: [shelfId], references: [shelfId])
   code          String             @unique
   createdAt     DateTime           @default(now())

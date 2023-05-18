@@ -26,9 +26,9 @@ router.get('/', (req, res, next) => {
 // This route only requires an authorization.check when it comes to creating new administrators
 
 
-router.get('/:userId', authentication.check, authorization.check, (req, res, next) => {
+router.get('/:userId',(req, res, next) => {
     try {
-        persistence.getUserByuserId(userId(req.params.userId))
+        persistence.getUserByuserId(Number(req.params.userId))
             .then((user) => {
                 res.status(200)
                     .json(user);
@@ -41,24 +41,10 @@ router.get('/:userId', authentication.check, authorization.check, (req, res, nex
     }
 });
 
-router.get('/:userEmail', (req, res, next) => {
-    try {
-        persistence.getUserByEmail(userId(req.params.email))
-            .then((user) => {
-                res.status(200)
-                    .json(user);
-            });
-
-    } catch (e) {
-        console.log(e);
-        res.status(500)
-            .send(errorHandler());
-    }
-});
 
 router.put('/:userId', (req, res, next) => {
     try {
-        persistence.updateUser(userId(req.params.userId), req.body)
+        persistence.updateUser(Number(req.params.userId), req.body)
             .then((updatedUser) => {
                 res.status(200)
                     .json(updatedUser);
@@ -73,7 +59,7 @@ router.put('/:userId', (req, res, next) => {
 
 router.delete('/:userId', (req, res, next) => {
     try {
-        persistence.deleteUser(userId(req.params.userId))
+        persistence.deleteUser(Number(req.params.userId))
             .then((deletedUser) => {
                 res.status(200)
                     .json(deletedUser);

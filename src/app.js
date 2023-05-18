@@ -2,9 +2,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const session = require('express-session');
-const fs = require('fs');
-const path = require('path');
-const logger = require('../lib/logger');
+
+
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
@@ -19,7 +18,7 @@ const passport = require('../lib/authentication').passport;
 
 
 const app = express();
-app.use(logger);
+
 
 app.use(morgan('dev'));
 
