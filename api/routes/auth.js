@@ -10,69 +10,57 @@ const bcrypt = require('bcrypt');
 const authorization = require('../../lib/authorization');
 
 
-const {loginValidator, createUserValidator} = require('../../lib/validation');
-const {
-    errorHandler
-} = require('../../lib/error');
+const {loginValidator, createUserValidator, verifyEmailValidator, passwordResetValidator} = require('../../lib/validation');
+const {errorHandler, defaultErr} = require('../../lib/error');
 const authentication = require('../../lib/authentication');
 
 const {limiter, bruteForceProtection} = require('../../lib/rateLimiter');
-const {getUserByEmail, createUser} = require("../../lib/persistence");
-const {emailVerifyHandler} = require("../../lib/handler");
+const {getUserByEmail, createUser, markEmailAsVerified, updateUserPassword} = require("../../lib/persistence");
+const {emailVerifyHandler, passwordResetHandler} = require("../../lib/handler");
 
 router.all('*', cors({origin: '*'}));
 
 /* Returns JWT token to use if everything goes well, returns error messages otherwise. */
-router.post('/login', loginValidator(), async (req, res, next) => {
-    passport.authenticate('basic-login', async (err, user, info) => {
-        try {
-            if (err) {
-                // Handling any possible errors
-                return res.status(500).send(errorHandler())
-            }
-            if (!user) {
-
-                // If the authentication goes wrong
-                return res.status(401).send(info)
-            }
-            req.login(user, {
-                session: false
-            }, async (error) => {
-                if (error) {
-                    // Handling any possible errors
-                    return res.status(500).send(errorHandler())
-                }
-                // If everything goes well, generate the new JWT token and send it.
-                const body = {
-                    userId: user.userId,
-                    email: user.email
-                };
-                const token = jwt.sign({
-                        user: body
-                    }, process.env.JWT_SECRET,
-                    // Signing options
-                    {
-                        expiresIn: process.env.JWT_EXPIRATION
-                    });
-
-                return res.json({
-                    token: token,
-                    userId: user.userId
-                });
-            });
-        } catch (error) {
-
-            return next(error);
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', { session: false },(err, user, info) => {
+        if (err) {
+            // Handle error during authentication
+            return next(err);
         }
+
+        if (!user) {
+            // User authentication failed
+            console.log('Authentication failed.');
+            return res.status(401).json({ message: info.message });
+        }
+        const token = jwt.sign({ userId: user.userId }, 'JWT_SECRET', { expiresIn: process.env.JWT_EXPIRATION });
+        // User authentication succeeded
+        req.login(user, (err) => {
+            if (err) {
+                // Handle error during login
+                console.log('User logged in');
+                return next(err);
+            }
+            // Redirect or send response indicating successful login
+
+            return res.status(200).json({ message: 'Login successful', userId: user.userId, token: token });
+        });
     })(req, res, next);
 });
 
 router.post('/logout', async (req, res) => {
     if (req.user) {
-        req.logout();
-        res.status(200).send({
-            message: "Logged out."
-        })
+        req.logout((err) => {
+            if (err) {
+                // Handle any errors that occurred during logout
+                return res.status(500).json({ message: 'An error occurred during logout.' });
+            }
+
+            // Clear the session and log out the user
+            req.session.destroy(() => {
+                res.status(200).json({ message: 'Logged out successfully.' });
+            });
+        });
     } else {
         res.status(401).send({
             message: "Not logged in."
@@ -117,28 +105,115 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
             first_name: req.body.first_name,
             last_name: req.body.last_name,
             password: hashedPassword,
-            email: email,
+            email: req.body.email,
             type: req.body.type,
 
-            // Add other properties as needed
+
         });
-
+        const secretKey = 'JWT_SECRET';
         // Generate a new JWT token for the registered user
-        const verificationToken = jwt.sign(
-            {user: {userId: newUser.userId, email: newUser.email}},
-            process.env.JWT_SECRET,
-            {expiresIn: process.env.JWT_EXPIRATION}
-        );
+        const verificationToken = jwt.sign(email, secretKey);
 
-        emailVerifyHandler(newUser.email, verificationToken);
+        // add email verification after registration
+        // emailVerifyHandler(email, verificationToken); // not working
+
         return res.json({
             verificationToken: verificationToken,
             userId: newUser.userId,
         });
+
+
+
     } catch (error) {
         return next(error);
     }
 });
+
+// Email verification route
+
+// Route to handle email verification if the user doesnt verify it when registering
+// Only a logged in user can access this route, email verification is only for users to be able to make transactions
+router.post('/verify-email' /*,authentication.check*/, verifyEmailValidator(), (req, res) => {
+    // Generate a verification token
+    const secretKey = 'JWT_SECRET'; // Replace with your actual secret key
+    const payload = {
+        email: req.body.email,
+        isVerified: false,
+    };
+    const verificationToken = jwt.sign(payload, secretKey);
+
+    emailVerifyHandler(payload.email, verificationToken);
+
+
+});
+
+// Route to handle email verification
+// Only a logged in user can access this route, email verification is only for users to be able to make transactions
+router.get('/verify/:verificationToken' /*,authentication.check*/, (req, res) => {
+    const verificationToken = req.params.verificationToken;
+
+    try {
+        const secretKey = 'JWT_SECRET';
+        const decodedToken = jwt.verify(verificationToken, secretKey);
+
+        // Update user's email verification status in the database
+
+        const user = getUserByEmail(decodedToken.email);
+
+
+        if (user.isVerified) {
+            // If the user's email is already verified, show a message indicating that
+            return res.status(400).json({message: 'Email already verified.'});
+        }
+
+        // Mark the user's email as verified in the database
+        markEmailAsVerified(decodedToken.email);
+
+        // Redirect the user to a success page or show a success message
+        res.status(200).json({message: 'Email verified successfully. You can now make transactions.'});
+    } catch (err) {
+        // If verification token is invalid, show an error message
+        res.status(400).json({message: 'Invalid verification token.'});
+    }
+});
+
+router.post('/password-reset' /*,authentication.check*/,passwordResetValidator(), async (req, res) => {
+    const secretKey = 'JWT_SECRET';
+    const {email} = req.body;
+
+    const verificationToken = jwt.sign(email, secretKey);
+
+    passwordResetHandler(email, verificationToken);
+
+});
+
+// Password reset form route
+router.get('/reset-password/:resetToken'/*,authentication.check*/, async (req, res) => {
+    const {resetToken, password} = req.body;
+
+    try {
+        const secretKey = 'JWT_SECRET';
+        const decodedToken = jwt.verify(resetToken, secretKey);
+
+        // Update user's email verification status in the database
+
+        const user = getUserByEmail(decodedToken.email);
+
+        return res.status(400).json({message: 'Invalid or expired token.'});
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await updateUserPassword(user.userId, hashedPassword);
+
+        // Invalidate the reset token by removing it from the user's record
+
+        // Redirect the user to a success page or show a success message
+        res.status(200).json({message: 'Password reset successful.'});
+    } catch (err) {
+        // If verification token is invalid, show an error message
+        res.status(400).json({message: 'Invalid or expired token.'});
+    }
+});
+// Update password route
 
 
 module.exports = router;

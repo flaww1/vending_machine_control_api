@@ -17,7 +17,7 @@ model User {
   type               User_type
   registration_date  DateTime             @db.DateTime(0)
   isVerified         Boolean              @default(false)
-  Feedback           Feedback[]
+  dFeedback          Feedback[]
   reservation_Cart   reservation_Cart[]
   Wishlist           Wishlist[]
   Provider           Provider[]
