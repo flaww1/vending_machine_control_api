@@ -18,6 +18,7 @@ const authentication = require('../../lib/authentication');
 
 const {limiter, bruteForceProtection} = require('../../lib/rateLimiter');
 const {getUserByEmail, createUser} = require("../../lib/persistence");
+const {emailVerifyHandler} = require("../../lib/handler");
 
 router.all('*', cors({origin: '*'}));
 
@@ -123,15 +124,16 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
         });
 
         // Generate a new JWT token for the registered user
-        const token = jwt.sign(
-            {user: {userId: newUser.id, email: newUser.email}},
+        const verificationToken = jwt.sign(
+            {user: {userId: newUser.userId, email: newUser.email}},
             process.env.JWT_SECRET,
             {expiresIn: process.env.JWT_EXPIRATION}
         );
 
+        emailVerifyHandler(newUser.email, verificationToken);
         return res.json({
-            token: token,
-            userId: newUser.id,
+            verificationToken: verificationToken,
+            userId: newUser.userId,
         });
     } catch (error) {
         return next(error);
