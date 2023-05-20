@@ -95,10 +95,10 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
 
         // Generate a salt for password hashing
         const saltRounds = 10;
-        const salt = bcrypt.genSaltSync(saltRounds);
+
 
         // Hash the password
-        const hashedPassword = bcrypt.hashSync(password, salt);
+        const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
         // Create the user
         const newUser = await createUser({
