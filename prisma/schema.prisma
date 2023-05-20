@@ -7,230 +7,379 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model administrador {
-  IdAdmin Int       @id
-  Nome    String    @db.VarChar(255)
-  maquina maquina[]
+// USER
+model User {
+  userId             Int                  @id @default(autoincrement())
+  first_name         String               @db.VarChar(255)
+  last_name          String               @db.VarChar(255)
+  password           String               @db.VarChar(255)
+  email              String               @unique(map: "email") @db.VarChar(255)
+  type               User_type
+  registration_date  DateTime             @db.DateTime(0)
+  isVerified         Boolean              @default(false)
+  dFeedback          Feedback[]
+  reservation_Cart   reservation_Cart[]
+  Wishlist           Wishlist[]
+  Provider           Provider[]
+  reservation        Reservation[]
+  Notification       Notification[]
+  Machine            Machine[]
+  RestockRequest     RestockRequest[]
+  MaintenanceRequest MaintenanceRequest[]
+
+  @@index([userId], map: "userId")
 }
 
-model estado {
-  IdEstado        Int       @id
-  DescricaoEstado String?   @db.VarChar(255)
-  maquina         maquina[]
+model Provider {
+  providerId         Int                  @id @default(autoincrement())
+  provider           User                 @relation(fields: [providerId], references: [userId])
+  type               Provider_type
+  phone              String               @db.VarChar(20)
+  Address            Address[]
+  RestockRequest     RestockRequest[]
+  MaintenanceRequest MaintenanceRequest[]
+
+  @@index([providerId], map: "providerId")
 }
 
-model feedback {
-  IdFeedback       Int                @id
-  Titulo           String?            @db.VarChar(255)
-  CorpoTexto       String?            @db.VarChar(255)
-  Numero           Int?
-  IdTipoFeedback   Int?
-  tipofeedback     tipofeedback?      @relation(fields: [IdTipoFeedback], references: [IdTipoFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedTipo")
-  utilizador       utilizador?        @relation(fields: [Numero], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedUtili")
-  feedback_maquina feedback_maquina[] @ignore
-  feedback_produto feedback_produto[] @ignore
+model Address {
+  addressId   Int      @id @default(autoincrement())
+  street      String   @db.VarChar(255)
+  country     String   @db.VarChar(50)
+  city        String   @db.VarChar(50)
+  latitude    Decimal  @db.Decimal(8, 6)
+  longitude   Decimal  @db.Decimal(9, 6)
+  postal_code String   @db.VarChar(10)
+  nif         Int
+  providerId  Int
+  provider    Provider @relation(fields: [providerId], references: [providerId])
 
-  @@index([IdTipoFeedback], map: "fk_FeedTipo")
-  @@index([Numero], map: "fk_FeedUtili")
+  @@index([providerId], map: "providerId")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model feedback_maquina {
-  IdFeedback Int?
-  IdMaquina  Int?
-  feedback   feedback? @relation(fields: [IdFeedback], references: [IdFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedMaquiFeed")
-  maquina    maquina?  @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedMaquiMaqui")
+model reservation_Cart {
+  cartId       Int     @id @default(autoincrement())
+  userId       Int
+  user         User    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_1")
+  productId    Int
+  product      Product @relation(fields: [productId], references: [productId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_2")
+  index        Int
+  quantity     Int
+  machineId    Int
+  machine      Machine @relation(fields: [machineId], references: [machineId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_Cart_ibfk_3")
+  Shelf        Shelf?  @relation(fields: [shelfShelfId], references: [shelfId])
+  shelfShelfId Int?
 
-  @@index([IdFeedback], map: "fk_FeedMaquiFeed")
-  @@index([IdMaquina], map: "fk_FeedMaquiMaqui")
-  @@ignore
+  @@index([userId], map: "user")
+  @@index([productId], map: "product")
+  @@index([machineId], map: "machine")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model feedback_produto {
-  IdFeedback Int?
-  IdProduto  Int?
-  feedback   feedback? @relation(fields: [IdFeedback], references: [IdFeedback], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedProduFeed")
-  produto    produto?  @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_FeedProduProdu")
+model Machine {
+  machineId   Int              @id @default(autoincrement())
+  modelId     Int
+  model       MachineModel     @relation(fields: [modelId], references: [modelId])
+  type        Machine_Types
+  status      Machine_Status
+  energy_mode EnergyMode_Types
+  location    String           @db.Text
+  adminId     Int
+  admin       User             @relation(fields: [adminId], references: [userId])
+  // latitude            Float                 @db.Float
+  // longitude           Float                 @db.Float
 
-  @@index([IdFeedback], map: "fk_FeedProduFeed")
-  @@index([IdProduto], map: "fk_FeedProduProdu")
-  @@ignore
+  MaintenanceRequest MaintenanceRequest[]
+  Product            Product[]
+  Shelf              Shelf[]
+  reservation_Cart   reservation_Cart[]
+  Feedback_Machine   Feedback_Machine[]
+  RestockRequest     RestockRequest[]
+  reservation        Reservation[]
 }
 
-model fornecedor {
-  IdFornecedor       Int                  @id
-  Nome               String?              @db.VarChar(255)
-  produto_fornecedor produto_fornecedor[] @ignore
-  reabastecimento    reabastecimento[]
+model Product {
+  productId       Int          @id @default(autoincrement())
+  name            String       @db.VarChar(255)
+  image_uri       String       @db.VarChar(1000)
+  description     String       @db.VarChar(255)
+  type            Product_Type
+  price           Float        @db.Float
+  expiration_date DateTime     @db.Date
+
+  Feedback         Feedback[]
+  Product_Shelf    Product_Shelf[]
+  Shelf            Shelf[]
+  reservation      Reservation[]
+  reservation_Cart reservation_Cart[]
+  RestockRequest   RestockRequest[]
+  Wishlist         Wishlist[]
+  Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
+  machineMachineId Int?
+  Feedback_Product Feedback_Product[]
+
+  @@index([name], map: "name")
+  @@index([productId], map: "productId")
 }
 
-model manutencao {
-  IdManutencao      Int               @id
-  Motivo            String            @db.VarChar(255)
-  Dia               DateTime          @db.DateTime(0)
-  IdTecnico         Int
-  IdMaquina         Int?
-  tecnicomanutencao tecnicomanutencao @relation(fields: [IdTecnico], references: [IdTecnico], onDelete: NoAction, onUpdate: NoAction, map: "fk_ManuTec")
-  maquina           maquina?          @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_ManutMaqui")
+model Shelf {
+  shelfId          Int                @id @default(autoincrement())
+  userId           Int
+  machineId        Int
+  Machine          Machine            @relation(fields: [machineId], references: [machineId])
+  productId        Int
+  Product          Product?           @relation(fields: [productId], references: [productId])
+  Product_Shelf    Product_Shelf[]
+  reservation_Cart reservation_Cart[]
+  reservation      Reservation[]
 
-  @@index([IdTecnico], map: "fk_ManuTec")
-  @@index([IdMaquina], map: "fk_ManutMaqui")
+  @@index([machineId], map: "Machine")
+  @@index([productId], map: "Product")
 }
 
-model maquina {
-  IdMaquina          Int                  @id
-  Localizacao        String               @db.VarChar(255)
-  Modelo             String?              @db.VarChar(255)
-  IdTipoMaquina      Int?
-  IdAdmin            Int
-  IdModoEnergia      Int
-  IdEstado           Int
-  feedback_maquina   feedback_maquina[]   @ignore
-  manutencao         manutencao[]
-  tipomaquina        tipomaquina?         @relation(fields: [IdTipoMaquina], references: [IdTipoMaquina], onDelete: NoAction, onUpdate: NoAction, map: "FK__Maquina__IdTipoM__4D94879B")
-  administrador      administrador        @relation(fields: [IdAdmin], references: [IdAdmin], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdAdmin")
-  estado             estado               @relation(fields: [IdEstado], references: [IdEstado], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdEstado")
-  modoenergia        modoenergia          @relation(fields: [IdModoEnergia], references: [IdModoEnergia], onDelete: NoAction, onUpdate: NoAction, map: "fk_IdModo")
-  prateleira         prateleira[]
-  transacao          transacao[]
-  utilizador_maquina utilizador_maquina[] @ignore
-
-  @@index([IdTipoMaquina], map: "FK__Maquina__IdTipoM__4D94879B")
-  @@index([IdAdmin], map: "fk_IdAdmin")
-  @@index([IdEstado], map: "fk_IdEstado")
-  @@index([IdModoEnergia], map: "fk_IdModo")
+model MachineModel {
+  modelId       Int       @id @default(autoincrement())
+  model         String    @db.VarChar(255)
+  shelfQuantity Int
+  shelfCapacity Int
+  Machine       Machine[]
 }
 
-model modoenergia {
-  IdModoEnergia Int       @id
-  DescricaoModo String?   @db.VarChar(255)
-  maquina       maquina[]
+model Product_Shelf {
+  product_shelfId Int     @id @default(autoincrement())
+  shelfId         Int
+  shelf           Shelf   @relation(fields: [shelfId], references: [shelfId])
+  productId       Int
+  product         Product @relation(fields: [productId], references: [productId])
+  quantity_inSlot Int
+
+  @@index([shelfId], map: "shelf")
+  @@index([productId], map: "product")
 }
 
-model prateleira {
-  IdPrateleira       Int                  @id
-  Linha              Int
-  Coluna             Int
-  IdMaquina          Int?
-  maquina            maquina?             @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_PratMaqui")
-  produto_prateleira produto_prateleira[] @ignore
+model RestockRequest {
+  restockId       Int            @id @default(autoincrement())
+  machineId       Int
+  Machine         Machine        @relation(fields: [machineId], references: [machineId])
+  productId       Int
+  Product         Product        @relation(fields: [productId], references: [productId])
+  quantity        Int
+  providerId      Int
+  Provider        Provider       @relation(fields: [providerId], references: [providerId])
+  adminId         Int
+  Admin           User           @relation(fields: [adminId], references: [userId])
+  status          Restock_Status
+  arrival_date    DateTime       @db.DateTime(0)
+  transport_price Float          @db.Float
+  restock_price   Float          @db.Float
+  date            DateTime       @db.DateTime(0)
+  observations    String?        @db.VarChar(255)
 
-  @@index([IdMaquina], map: "fk_PratMaqui")
+  @@index([machineId], map: "machine")
+  @@index([productId], map: "product")
+  @@index([providerId], map: "provider")
+  @@index([adminId], map: "admin")
 }
 
-model produto {
-  IdProduto          Int                  @id
-  Nome               String               @db.VarChar(255)
-  Descricao          String               @db.VarChar(255)
-  ValorEnergetico    String               @db.VarChar(255)
-  Proteinas          String               @db.VarChar(255)
-  Carboidratos       String               @db.VarChar(255)
-  Gorduras           String               @db.VarChar(255)
-  Preco              Decimal?             @db.Decimal(5, 2)
-  IdTipoProduto      Int?
-  feedback_produto   feedback_produto[]   @ignore
-  tipoproduto        tipoproduto?         @relation(fields: [IdTipoProduto], references: [IdTipoProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProduTipo")
-  produto_fornecedor produto_fornecedor[] @ignore
-  produto_prateleira produto_prateleira[] @ignore
-  reabastecimento    reabastecimento[]
-  transacao          transacao[]
+model MaintenanceRequest {
+  maintenanceId Int                          @id @default(autoincrement())
+  type          Machine_Maintenance_Type
+  priority      Machine_Maintenance_Priority
+  status        Machine_Maintenance_Status
+  date          DateTime                     @db.DateTime(0)
+  machineId     Int
+  machine       Machine                      @relation(fields: [machineId], references: [machineId])
+  adminId       Int
+  providerId    Int
+  provider      Provider                     @relation(fields: [providerId], references: [providerId])
+  admin         User                         @relation(fields: [adminId], references: [userId])
+  description   String                       @db.VarChar(255)
 
-  @@index([IdTipoProduto], map: "fk_ProduTipo")
+  @@index([machineId], map: "machine")
+  @@index([providerId], map: "provider")
+  @@index([adminId], map: "admin")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model produto_fornecedor {
-  IdProduto    Int?
-  IdFornecedor Int?
-  fornecedor   fornecedor? @relation(fields: [IdFornecedor], references: [IdFornecedor], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProdFornForn")
-  produto      produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProdFornProd")
+model Feedback {
+  feedbackId       Int                @id @default(autoincrement())
+  title            String             @db.VarChar(255)
+  description      String             @db.VarChar(255)
+  type             Feedback_Type
+  status           Feedback_Status
+  date             DateTime           @db.DateTime(0)
+  userId           Int
+  User             User               @relation(fields: [userId], references: [userId])
+  Feedback_Machine Feedback_Machine[]
+  Feedback_Product Feedback_Product[]
+  Product          Product?           @relation(fields: [productId], references: [productId])
+  productId        Int?
 
-  @@index([IdFornecedor], map: "fk_ProdFornForn")
-  @@index([IdProduto], map: "fk_ProdFornProd")
-  @@ignore
+  @@index([userId], map: "user")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model produto_prateleira {
-  IdProduto    Int?
-  IdPrateleira Int?
-  prateleira   prateleira? @relation(fields: [IdPrateleira], references: [IdPrateleira], onDelete: NoAction, onUpdate: NoAction, map: "fk_PratProdu")
-  produto      produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ProduPrat")
+model Feedback_Machine {
+  feedback_machineId Int      @id @default(autoincrement())
+  feedbackId         Int
+  feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
+  machineId          Int
+  machine            Machine  @relation(fields: [machineId], references: [machineId])
 
-  @@index([IdPrateleira], map: "fk_PratProdu")
-  @@index([IdProduto], map: "fk_ProduPrat")
-  @@ignore
+  @@index([machineId], map: "machine")
+  @@index([feedbackId], map: "feedback")
 }
 
-model reabastecimento {
-  IdReabastecimento   Int         @id
-  DataReabastecimento DateTime    @db.DateTime(0)
-  IdProduto           Int?
-  IdFornecedor        Int?
-  fornecedor          fornecedor? @relation(fields: [IdFornecedor], references: [IdFornecedor], onDelete: NoAction, onUpdate: NoAction, map: "fk_ReabForne")
-  produto             produto?    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_ReabProdut")
+model Feedback_Product {
+  feedback_productId Int      @id @default(autoincrement())
+  feedbackId         Int
+  feedback           Feedback @relation(fields: [feedbackId], references: [feedbackId])
+  productId          Int
+  product            Product  @relation(fields: [productId], references: [productId])
 
-  @@index([IdFornecedor], map: "fk_ReabForne")
-  @@index([IdProduto], map: "fk_ReabProdut")
+  @@index([productId], map: "product")
+  @@index([feedbackId], map: "feedback")
 }
 
-model tecnicomanutencao {
-  IdTecnico  Int          @id
-  Nome       String?      @db.VarChar(255)
-  manutencao manutencao[]
+model Wishlist {
+  wishlistId Int     @id @default(autoincrement())
+  userId     Int
+  user       User    @relation(fields: [userId], references: [userId])
+  productId  Int
+  product    Product @relation(fields: [productId], references: [productId])
+
+  @@index([userId], map: "user")
+  @@index([productId], map: "product")
 }
 
-model tipofeedback {
-  IdTipoFeedback Int        @id
-  Nome           String?    @db.VarChar(255)
-  feedback       feedback[]
+model Notification {
+  notificationId Int                @id @default(autoincrement())
+  user           Int
+  title          String             @db.VarChar(255)
+  reservationId  Int?
+  content        String             @db.VarChar(255)
+  dismissed      Boolean            @default(false)
+  timestamp      DateTime           @db.DateTime(0)
+  scope          Notification_scope
+  userId         Int
+  User           User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_1")
+  Reservation    Reservation?       @relation(fields: [reservationId], references: [reservationId], onDelete: Cascade, onUpdate: NoAction, map: "Notification_ibfk_2")
+
+  @@index([reservationId], map: "reservation")
 }
 
-model tipomaquina {
-  IdTipoMaquina Int       @id
-  Descricao     String    @db.VarChar(255)
-  maquina       maquina[]
+model Reservation {
+  reservationId Int                @id @default(autoincrement())
+  status        reservation_Status
+  userId        Int
+  user          User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_ibfk_1")
+  total_price   Decimal            @db.Decimal(10, 2)
+  quantity      Int
+  productId     Int
+  product       Product            @relation(fields: [productId], references: [productId])
+  machineId     Int
+  machine       Machine            @relation(fields: [machineId], references: [machineId])
+  shelfId       Int
+  shelf         Shelf              @relation(fields: [shelfId], references: [shelfId])
+  code          String             @unique
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  paymentStatus Payment_Status
+  paymentMethod Payment_Method
+  Notification  Notification[]
 }
 
-model tipoproduto {
-  IdTipoProduto Int       @id
-  Nome          String?   @db.VarChar(255)
-  produto       produto[]
+enum User_type {
+  ADMINISTRATOR
+  USER
 }
 
-model transacao {
-  IdTransacao   Int        @id
-  DataTransacao DateTime   @db.DateTime(0)
-  Custo         Int
-  IdUtilizador  Int
-  IdMaquina     Int
-  IdProduto     Int
-  maquina       maquina    @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransMaqui")
-  produto       produto    @relation(fields: [IdProduto], references: [IdProduto], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransProdut")
-  utilizador    utilizador @relation(fields: [IdUtilizador], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_TransUtili")
-
-  @@index([IdMaquina], map: "fk_TransMaqui")
-  @@index([IdProduto], map: "fk_TransProdut")
-  @@index([IdUtilizador], map: "fk_TransUtili")
+enum Provider_type {
+  SUPPLIER
+  MAINTENANCE
 }
 
-model utilizador {
-  Numero             Int                  @id
-  Nome               String               @db.VarChar(255)
-  feedback           feedback[]
-  transacao          transacao[]
-  utilizador_maquina utilizador_maquina[] @ignore
+enum Machine_Types {
+  COLD_DRINKS
+  HEATED_DRINKS
+  SNACKS
+  OTHERS
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
-model utilizador_maquina {
-  Numero     Int?
-  IdMaquina  Int?
-  maquina    maquina?    @relation(fields: [IdMaquina], references: [IdMaquina], onDelete: NoAction, onUpdate: NoAction, map: "fk_Maquina")
-  utilizador utilizador? @relation(fields: [Numero], references: [Numero], onDelete: NoAction, onUpdate: NoAction, map: "fk_Utilizador")
+enum Machine_Status {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
 
-  @@index([IdMaquina], map: "fk_Maquina")
-  @@index([Numero], map: "fk_Utilizador")
-  @@ignore
+enum Feedback_Type {
+  RECOMENDATION
+  PRODUCT
+  MACHINE
+}
+
+enum Feedback_Status {
+  PENDING
+  RESOLVED
+}
+
+enum Product_Type {
+  COLD_DRINK
+  HEATED_DRINK
+  SNACK
+  OTHER
+}
+
+enum reservation_Status {
+  PENDING
+  COMPLETED
+  CANCELED
+  REFUNDED
+}
+
+enum Payment_Status {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+enum EnergyMode_Types {
+  ECO
+  NORMAL
+  MAX
+}
+
+enum Machine_Maintenance_Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Machine_Maintenance_Type {
+  CLEANING
+  REPAIR
+  OTHER
+}
+
+enum Machine_Maintenance_Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Restock_Status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Notification_scope {
+  AWAITING_PAYMENT
+  PROCESSING
+  DROPPING
+  COMPLETE
+  FAILURE
+  CANCELED
+}
+
+enum Payment_Method {
+  MACHINE
+  APP
 }
