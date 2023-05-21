@@ -41,7 +41,7 @@ router.get('/:productId', (req, res, next) => {
   } catch (e) {
     console.log(e);
     res.status(500)
-      .send(errorHandler());
+      .send(defaultErr());
   }
 });
 

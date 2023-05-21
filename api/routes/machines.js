@@ -2,9 +2,8 @@ const express = require('express');
 const persistence = require('../../lib/persistence');
 const {errorHandler, defaultErr} = require('../../lib/error');
 const authentication = require('../../lib/authentication');
-const {getAllMachines} = require("../../lib/persistence");
+const {getAllMachines, getProductsByMachineId, getMachineById} = require("../../lib/persistence");
 const {getAllMachinesValidator} = require("../../lib/validation");
-
 const router = express.Router();
 
 
@@ -32,20 +31,19 @@ router.get('/',  (req, res) => {
 });
 
 // list machine by id
-router.get('/:machineId/:products', /*authentication.check,*/ (req, res, next) => {
+router.get('/:machineId', async (req, res) => {
     try {
-        persistence.getMachineById(Number(req.params.machineId))
-            .then((machine) => {
-                res.status(200)
-                    .json(machine);
-            });
+        const machineId = parseInt(req.params.machineId);
 
-    } catch (e) {
-        console.log(e);
-        res.status(500)
-            .send(errorHandler());
+        const products = await getProductsByMachineId(machineId);
+
+        res.json(products);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to retrieve products by machine ID' });
     }
 });
+
 
 router.post('/', (req, res, next) => {
         try {
