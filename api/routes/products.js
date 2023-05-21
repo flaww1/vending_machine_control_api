@@ -14,12 +14,11 @@ router.get('/',  (req, res) => {
             .getAllProducts(
                 req.query.limit,
                 req.query.page,
-                req.query.category,
                 req.query.keywords,
                 req.query.sort,
                 { min: req.query.min_price, max: req.query.max_price },
                 req.query.type,
-                req.query.include_unbuyable
+
             )
             .then((productData) => {
                 res.status(200).json(productData);

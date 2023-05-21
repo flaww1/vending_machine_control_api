@@ -1,6 +1,6 @@
 const express = require('express');
 const persistence = require('../../lib/persistence');
-const {errorHandler} = require('../../lib/error');
+const {errorHandler, defaultErr} = require('../../lib/error');
 const authentication = require('../../lib/authentication');
 const {getAllMachines} = require("../../lib/persistence");
 const {getAllMachinesValidator} = require("../../lib/validation");
@@ -9,16 +9,25 @@ const router = express.Router();
 
 
 // list all machines
-router.get('/',getAllMachinesValidator(), async (req, res) => {
+router.get('/',  (req, res) => {
     try {
-        const { type, location, sort, status } = req.query;
+        persistence
+            .getAllMachines(
+                req.query.limit,
+                req.query.page,
+                req.query.keywords,
+                req.query.sort,
+                req.query.location,
+                req.query.status,
+                req.query.type,
 
-        const machines = await getAllMachines({ type, location, sort, status });
-
-        res.json(machines);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'An error occurred while fetching machines.' });
+            )
+            .then((machineData) => {
+                res.status(200).json(machineData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
     }
 });
 
