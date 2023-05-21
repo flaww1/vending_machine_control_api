@@ -1,49 +1,35 @@
 const express = require('express');
 const persistence = require('../../lib/persistence');
-const { errorHandler } = require('../../lib/error');
+const { errorHandler, defaultErr } = require('../../lib/error');
+const { getProductsValidator } = require('../../lib/validation');
+
 
 const router = express.Router();
 
 // generate all product routes here
 
-router.get('/', (req, res, next) => {
-  try {
-    persistence.getAllProducts()
-      .then((productData) => {
-        res.status(200)
-          .json(productData);
-      });
-  }
-  catch (e) {
-    console.log(e);
-    res.status(500)
-      .send(errorHandler());
-      }
-
+router.get('/',  (req, res) => {
+    try {
+        persistence
+            .getAllProducts(
+                req.query.limit,
+                req.query.page,
+                req.query.category,
+                req.query.keywords,
+                req.query.sort,
+                { min: req.query.min_price, max: req.query.max_price },
+                req.query.type,
+                req.query.include_unbuyable
+            )
+            .then((productData) => {
+                res.status(200).json(productData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.post('/', (req, res, next) => {
-  try {
-
-    persistence.createProducts(req.body)
-        .then((createdProduct) => {
-          if (createdProduct) {
-            res.status(200)
-                .json(createdProduct);
-
-          } else {
-            res.status(500)
-                .send(errorHandler());
-          }
-        });
-
-  } catch (e) {
-    console.log(e);
-    res.status(400)
-        .send({ message: 'Invalid data. Make sure to include every field.' });
-  }
-
-});
 
 router.get('/:productId', (req, res, next) => {
   try {
