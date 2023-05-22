@@ -105,7 +105,6 @@ model Product {
 
   Feedback         Feedback[]
   Product_Shelf    Product_Shelf[]
-  Shelf            Shelf[]
   reservation      Reservation[]
   reservation_Cart reservation_Cart[]
   RestockRequest   RestockRequest[]
@@ -120,25 +119,13 @@ model Product {
 
 model Shelf {
   shelfId          Int                @id @default(autoincrement())
-  userId           Int
   machineId        Int
   Machine          Machine            @relation(fields: [machineId], references: [machineId])
-  productId        Int
-  Product          Product?           @relation(fields: [productId], references: [productId])
   Product_Shelf    Product_Shelf[]
   reservation_Cart reservation_Cart[]
   reservation      Reservation[]
 
   @@index([machineId], map: "Machine")
-  @@index([productId], map: "Product")
-}
-
-model MachineModel {
-  modelId       Int       @id @default(autoincrement())
-  model         String    @db.VarChar(255)
-  shelfQuantity Int
-  shelfCapacity Int
-  Machine       Machine[]
 }
 
 model Product_Shelf {
@@ -151,6 +138,14 @@ model Product_Shelf {
 
   @@index([shelfId], map: "shelf")
   @@index([productId], map: "product")
+}
+
+model MachineModel {
+  modelId       Int       @id @default(autoincrement())
+  model         String    @db.VarChar(255)
+  shelfQuantity Int
+  shelfCapacity Int
+  Machine       Machine[]
 }
 
 model RestockRequest {

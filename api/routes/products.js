@@ -1,14 +1,16 @@
 const express = require('express');
+
 const persistence = require('../../lib/persistence');
-const { errorHandler, defaultErr } = require('../../lib/error');
-const { getProductsValidator } = require('../../lib/validation');
+
+const {errorHandler, defaultErr} = require('../../lib/error');
+const {getProductsValidator} = require('../../lib/validation');
 
 
 const router = express.Router();
 
 // generate all product routes here
 
-router.get('/',  (req, res) => {
+router.get('/', (req, res) => {
     try {
         persistence
             .getAllProducts(
@@ -16,9 +18,8 @@ router.get('/',  (req, res) => {
                 req.query.page,
                 req.query.keywords,
                 req.query.sort,
-                { min: req.query.min_price, max: req.query.max_price },
+                {min: req.query.min_price, max: req.query.max_price},
                 req.query.type,
-
             )
             .then((productData) => {
                 res.status(200).json(productData);
@@ -30,56 +31,57 @@ router.get('/',  (req, res) => {
 });
 
 
-router.get('/:productId', (req, res, next) => {
-  try {
-    persistence.getProductById(Number(req.params.productId))
-      .then((product) => {
-        res.status(200)
-          .json(product);
-      });
+router.get('/:productId', async (req, res) => {
+    const productId = parseInt(req.params.productId);
 
-  } catch (e) {
-    console.log(e);
-    res.status(500)
-      .send(errorHandler());
-  }
+    try {
+        const products = await persistence.getProductById(productId);
+        const machines = await persistence.getMachinesByProductId(productId);
+
+
+        res.json({ products, machines});
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({error: 'Failed to retrieve product information'});
+    }
 });
 
 
 router.delete('/:productId', (req, res, next) => {
-  try {
-    persistence.deleteProduct(Number(req.params.productId))
-      .then((product) => {
-        res.status(200)
-          .json(product);
-      });
+    try {
+        persistence.deleteProduct(Number(req.params.productId))
+            .then((product) => {
+                res.status(200)
+                    .json(product);
+            });
 
-  } catch (e) {
-    console.log(e);
-    res.status(500)
-      .send(errorHandler());
-  }
+    } catch (e) {
+        console.log(e);
+        res.status(500)
+            .send(errorHandler());
+    }
 });
 
 router.put('/:productId', (req, res, next) => {
-  try {
-    persistence.updateProduct(Number(req.params.productId), req.body)
-      .then((updatedProduct) => {
-        if (updatedProduct) {
-          res.status(200)
-            .json(updatedProduct);
+    try {
+        persistence.updateProduct(Number(req.params.productId), req.body)
+            .then((updatedProduct) => {
+                if (updatedProduct) {
+                    res.status(200)
+                        .json(updatedProduct);
 
-        } else {
-          res.status(500)
-            .send(errorHandler());
-        }
-      });
+                } else {
+                    res.status(500)
+                        .send(errorHandler());
+                }
+            });
 
-  } catch (e) {
-    console.log(e);
-    res.status(400)
-      .send({ message: 'Invalid data. Make sure to include every field.' });
-  }
+    } catch (e) {
+        console.log(e);
+        res.status(400)
+            .send({message: 'Invalid data. Make sure to include every field.'});
+    }
 
 });
 
