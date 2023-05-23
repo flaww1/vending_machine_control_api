@@ -30,7 +30,7 @@ router.get('/',  (req, res) => {
     }
 });
 
-// list machine by id
+// list products by machine id
 router.get('/:machineId', async (req, res) => {
     const machineId = parseInt(req.params.machineId);
 

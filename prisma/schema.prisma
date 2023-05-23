@@ -258,24 +258,25 @@ model Notification {
 }
 
 model Reservation {
-  reservationId Int                @id @default(autoincrement())
-  status        reservation_Status
-  userId        Int
-  user          User               @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_ibfk_1")
-  total_price   Decimal            @db.Decimal(10, 2)
-  quantity      Int
-  productId     Int
-  product       Product            @relation(fields: [productId], references: [productId])
-  machineId     Int
-  machine       Machine            @relation(fields: [machineId], references: [machineId])
-  shelfId       Int
-  shelf         Shelf              @relation(fields: [shelfId], references: [shelfId])
-  code          String             @unique
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  paymentStatus Payment_Status
-  paymentMethod Payment_Method
-  Notification  Notification[]
+  reservationId         Int                    @id @default(autoincrement())
+  status                reservation_Status
+  userId                Int
+  user                  User                   @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "reservation_ibfk_1")
+  total_price           Decimal                @db.Decimal(10, 2)
+  quantity              Int
+  productId             Int
+  product               Product                @relation(fields: [productId], references: [productId])
+  machineId             Int
+  machine               Machine                @relation(fields: [machineId], references: [machineId])
+  shelfId               Int
+  shelf                 Shelf                  @relation(fields: [shelfId], references: [shelfId])
+  reservationCodeStatus ReservationCode_Status @default(UNUSED)
+  reservationCode       String                 @unique
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  paymentStatus         Payment_Status         @default(PENDING)
+  paymentMethod         Payment_Method
+  Notification          Notification[]
 }
 
 enum User_type {
@@ -320,7 +321,7 @@ enum Product_Type {
 }
 
 enum reservation_Status {
-  PENDING
+  AWAITING_PAYMENT
   COMPLETED
   CANCELED
   REFUNDED
@@ -374,4 +375,9 @@ enum Notification_scope {
 enum Payment_Method {
   MACHINE
   APP
+}
+
+enum ReservationCode_Status {
+  USED
+  UNUSED
 }
