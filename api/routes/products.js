@@ -31,6 +31,7 @@ router.get('/', (req, res) => {
 });
 
 
+// list which machines have a product
 router.get('/:productId', async (req, res) => {
     const productId = parseInt(req.params.productId);
 

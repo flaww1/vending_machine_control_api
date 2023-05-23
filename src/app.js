@@ -17,6 +17,8 @@ const api = require('../api/routes');
 const passport = require('../lib/authentication').passport;
 
 
+
+
 const app = express();
 
 
@@ -62,6 +64,9 @@ const authRoutes = require('../api/routes/auth');
 const productRoutes = require('../api/routes/products');
 const userRoutes = require('../api/routes/users');
 const indexRoutes = require('../api/routes/index');
+
+const scheduleReservationExpirationTask = require('../lib/tasks');
+scheduleReservationExpirationTask();
 
 
 
