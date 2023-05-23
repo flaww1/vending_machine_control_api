@@ -1,34 +1,37 @@
 const express = require('express');
+const prisma
 const persistence = require('../../lib/persistence');
 
 
 const router = express.Router();
 
 // Define the reservation endpoint
-router.post('/reservations', (req, res) => {
-    const { userId, productId, vendingMachineId } = req.body;
+router.post('/reservations', async (req, res) => {
+    try {
+        const { userId, productId, machineId } = req.body;
 
-    // Generate a unique reservation code
-    const reservationCode = generateReservationCode();
+        // Generate a unique reservation code
+        const reservationCode = generateReservationCode();
 
-    // Create a new reservation record in the database
-    const reservation = new reservation({
-        user: userId,
-        product: productId,
-
-        vendingMachine: vendingMachineId,
-        code: reservationCode
-    });
-
-    reservation.save()
-        .then((savedReservation) => {
-            res.json(savedReservation);
-        })
-        .catch((error) => {
-            console.error('Error while creating reservation:', error);
-            res.status(500).json({ error: 'An error occurred while creating a reservation' });
+        // Create a reservation record in the database
+        const reservation = await prisma.reservation.create({
+            data: {
+                user: { connect: { id: userId } },
+                product: { connect: { id: productId } },
+                machine: { connect: { id: machineId } },
+                reservationCode,
+                isPaid: false, // Assuming the reservation is initially unpaid
+            },
         });
+
+        // Return the reservation details to the client
+        res.status(201).json({ reservation });
+    } catch (error) {
+        console.error('Failed to create reservation:', error);
+        res.status(500).json({ error: 'Failed to create reservation' });
+    }
 });
+
 
 // GET reservation code by ID
 router.get('/reservations/:id/code', async (req, res) => {
