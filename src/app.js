@@ -17,6 +17,8 @@ const api = require('../api/routes');
 const passport = require('../lib/authentication').passport;
 
 
+
+
 const app = express();
 
 
@@ -43,7 +45,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(session({
-  secret: 'key123',
+  secret: process.env.SECRET_KEY,
   resave: false,
   saveUninitialized: true,
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
@@ -62,6 +64,9 @@ const authRoutes = require('../api/routes/auth');
 const productRoutes = require('../api/routes/products');
 const userRoutes = require('../api/routes/users');
 const indexRoutes = require('../api/routes/index');
+
+const scheduleReservationExpirationTask = require('../lib/tasks');
+scheduleReservationExpirationTask();
 
 
 

@@ -277,6 +277,7 @@ model Reservation {
   paymentStatus         Payment_Status         @default(PENDING)
   paymentMethod         Payment_Method
   Notification          Notification[]
+  expirationTime        DateTime?
 }
 
 enum User_type {
