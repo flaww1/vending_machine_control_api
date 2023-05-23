@@ -5,8 +5,8 @@ const {
     updateReservationPaymentStatus,
     createReservation,
     checkProductAvailabilityInMachine,
-    checkQuantityMatch,
     dispenseProduct,
+    checkProductQuantity, unlockProductQuantity,
 } = require('../../lib/reservation');
 const {reservationValidator} = require("../../lib/validation");
 const {handlePaymentMethods} = require("../../lib/payment");
@@ -112,14 +112,7 @@ router.post('/reservation', /*reservationValidator()*/ async (req, res) => {
         res.status(500).json({error: 'An error occurred while creating a reservation'});
     }
 
-    // handles the payment methods
-    try {
-        const paymentMethods = await handlePaymentMethods(reservation);
-        res.json(paymentMethods);
-    } catch (error) {
-        console.error('Error while handling payment options:', error);
-        res.status(400).json({error: 'Invalid payment option'});
-    }
+
 });
 
 
@@ -140,7 +133,7 @@ router.get('reservation/machine-display', (req, res) => {
 });
 
 // Machine Payment Route
-router.post('reservation/machine-payment/:machineId', async (req, res) => {
+router.post('reservation/payment/:machineId', async (req, res) => {
     const reservationCode = req.body.reservationCode;
     const paymentAmount = req.body.paymentAmount;
     const machineId = parseInt(req.params.machineId);
@@ -155,10 +148,14 @@ router.post('reservation/machine-payment/:machineId', async (req, res) => {
 
         // Verify if the collected payment amount matches the total price of the reserved product
         if (paymentAmount === reservation.total_price) {
+
+            await handlePaymentMethods(reservation);
+
             // Verify if the product is available in the machine
             const isProductAvailable = await checkProductAvailabilityInMachine(machineId, reservation.productId);
-            const quantityCheck = await checkQuantityMatch(machineId, reservation.productId, reservation.quantity);
+            const quantityCheck = await checkProductQuantity(machineId, reservation.productId, reservation.quantity);
 
+            // double-checking the quantity and availability of the product
             if (!quantityCheck) {
                 return res.status(400).json({ error: 'The machine does not have enough quantity of the requested product' });
             }
@@ -182,6 +179,7 @@ router.post('reservation/machine-payment/:machineId', async (req, res) => {
             return res.json({ message: 'Payment successful' });
         } else {
             return res.status(400).json({ error: 'Invalid payment amount' });
+
         }
 
 
@@ -193,10 +191,8 @@ router.post('reservation/machine-payment/:machineId', async (req, res) => {
 
 });
 
-// App Payment Route
-router.post('/reservation/app-payment', async (req, res) => {
 
-}
+
 
 router.post('/payments/webhook', async (req, res) => {
 
@@ -227,6 +223,41 @@ router.get('/payments/config', /*authentication.check*/ (req, res) => {
         publishable_key: process.env.STRIPE_PUBLISHABLE_KEY
     })
 })
+
+// Reservation cancellation route
+router.patch('/reservation/cancel/:reservationId', async (req, res) => {
+    const reservationId = req.params.reservationId;
+
+    try {
+        // Check if the reservation exists
+        const reservation = await getReservationById(reservationId);
+
+        if (!reservation) {
+            return res.status(404).json({ error: 'Reservation not found' });
+        }
+
+        // Check if the reservation has been paid
+        if (reservation.paymentStatus === 'COMPLETED') {
+            return res.status(400).json({ error: 'Cannot cancel a paid reservation, ask for a refund!' });
+        }
+
+        // Update the reservation status to 'CANCELED'
+        await updateReservationStatus(reservationId, 'CANCELED');
+
+        // Update the payment status to 'CANCELED'
+        await updateReservationPaymentStatus(reservationId, 'CANCELED');
+
+        // Unlock the reserved product quantity
+        await unlockProductQuantity(reservation.productId, reservation.quantity);
+
+        return res.json({ message: 'Reservation canceled successfully' });
+    } catch (error) {
+        console.error('Error while canceling reservation:', error);
+        res.status(500).json({ error: 'An error occurred while canceling the reservation' });
+    }
+});
+
+
 
 
 

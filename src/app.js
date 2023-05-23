@@ -45,7 +45,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(session({
-  secret: 'key123',
+  secret: process.env.SECRET_KEY,
   resave: false,
   saveUninitialized: true,
   cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
