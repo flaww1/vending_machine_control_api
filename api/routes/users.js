@@ -24,8 +24,6 @@ router.get('/', (req, res, next) => {
     }
 });
 // This route only requires an authorization.check when it comes to creating new administrators
-
-
 router.get('/:userId',(req, res, next) => {
     try {
         persistence.getUserByuserId(Number(req.params.userId))

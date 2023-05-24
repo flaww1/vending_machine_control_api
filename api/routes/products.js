@@ -8,7 +8,7 @@ const {getProductsValidator} = require('../../lib/validation');
 
 const router = express.Router();
 
-// generate all product routes here
+// generate all user accessible product routes here
 
 router.get('/', (req, res) => {
     try {
@@ -49,42 +49,7 @@ router.get('/:productId', async (req, res) => {
 });
 
 
-router.delete('/:productId', (req, res, next) => {
-    try {
-        persistence.deleteProduct(Number(req.params.productId))
-            .then((product) => {
-                res.status(200)
-                    .json(product);
-            });
 
-    } catch (e) {
-        console.log(e);
-        res.status(500)
-            .send(errorHandler());
-    }
-});
-
-router.put('/:productId', (req, res, next) => {
-    try {
-        persistence.updateProduct(Number(req.params.productId), req.body)
-            .then((updatedProduct) => {
-                if (updatedProduct) {
-                    res.status(200)
-                        .json(updatedProduct);
-
-                } else {
-                    res.status(500)
-                        .send(errorHandler());
-                }
-            });
-
-    } catch (e) {
-        console.log(e);
-        res.status(400)
-            .send({message: 'Invalid data. Make sure to include every field.'});
-    }
-
-});
 
 
 module.exports = router;
