@@ -65,7 +65,7 @@ const productRoutes = require('../api/routes/products');
 const userRoutes = require('../api/routes/users');
 const indexRoutes = require('../api/routes/index');
 
-const scheduleReservationExpirationTask = require('../lib/tasks');
+const { scheduleReservationExpirationTask } = require('../lib/tasks');
 scheduleReservationExpirationTask();
 
 
