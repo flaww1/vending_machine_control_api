@@ -17,42 +17,50 @@ model User {
   type               User_type
   registration_date  DateTime             @db.DateTime(0)
   isVerified         Boolean              @default(false)
-  dFeedback          Feedback[]
+  Feedback           Feedback[]
   reservation_Cart   reservation_Cart[]
   Wishlist           Wishlist[]
   reservation        Reservation[]
   Notification       Notification[]
-  Machine            Machine[]
   RestockRequest     RestockRequest[]
   MaintenanceRequest MaintenanceRequest[]
+  Provider           Provider[]
 
   @@index([userId], map: "userId")
 }
 
 model Provider {
-  providerId         Int                  @id @default(autoincrement())
-  type               Provider_type
-  phone              String               @db.VarChar(20)
-  Address            Address[]
-  RestockRequest     RestockRequest[]
-  MaintenanceRequest MaintenanceRequest[]
+  providerId                Int                  @id @default(autoincrement())
+  phone                     String               @db.VarChar(20)
+  userId                    Int
+  User                      User                 @relation(fields: [userId], references: [userId])
+  companyId                 Int
+  Company                   Company              @relation(fields: [companyId], references: [companyId])
+  claimedMaintenanceRequest MaintenanceRequest[]
+  claimedRestockRequest     RestockRequest[]
 
   @@index([providerId], map: "providerId")
 }
 
-model Address {
-  addressId   Int      @id @default(autoincrement())
-  street      String   @db.VarChar(255)
-  country     String   @db.VarChar(50)
-  city        String   @db.VarChar(50)
-  latitude    Decimal  @db.Decimal(8, 6)
-  longitude   Decimal  @db.Decimal(9, 6)
-  postal_code String   @db.VarChar(10)
-  nif         Int
-  providerId  Int
-  provider    Provider @relation(fields: [providerId], references: [providerId])
-
-  @@index([providerId], map: "providerId")
+model Company {
+  companyId          Int                  @id @default(autoincrement())
+  type               Company_type
+  name               String               @db.VarChar(255)
+  companyEmail       String               @db.VarChar(255)
+  companyPhone       String               @db.VarChar(20)
+  registration_date  DateTime             @db.DateTime(0)
+  RestockRequest     RestockRequest[]
+  MaintenanceRequest MaintenanceRequest[]
+  providers          Provider[]
+  street             String               @db.VarChar(255)
+  country            String               @db.VarChar(50)
+  city               String               @db.VarChar(50)
+  latitude           Decimal              @db.Decimal(8, 6)
+  longitude          Decimal              @db.Decimal(9, 6)
+  postal_code        String               @db.VarChar(10)
+  nif                Int
+  is_shipping        Boolean              @default(false)
+  is_billing         Boolean              @default(false)
 }
 
 model reservation_Cart {
@@ -81,8 +89,6 @@ model Machine {
   status      Machine_Status
   energy_mode EnergyMode_Types
   location    String           @db.Text
-  adminId     Int
-  admin       User             @relation(fields: [adminId], references: [userId])
   // latitude            Float                 @db.Float
   // longitude           Float                 @db.Float
 
@@ -149,46 +155,55 @@ model MachineModel {
 }
 
 model RestockRequest {
-  restockId       Int            @id @default(autoincrement())
-  machineId       Int
-  Machine         Machine        @relation(fields: [machineId], references: [machineId])
-  productId       Int
-  Product         Product        @relation(fields: [productId], references: [productId])
-  quantity        Int
-  providerId      Int
-  Provider        Provider       @relation(fields: [providerId], references: [providerId])
-  adminId         Int
-  Admin           User           @relation(fields: [adminId], references: [userId])
-  status          Restock_Status
-  arrival_date    DateTime       @db.DateTime(0)
-  transport_price Float          @db.Float
-  restock_price   Float          @db.Float
-  date            DateTime       @db.DateTime(0)
-  observations    String?        @db.VarChar(255)
+  restockId    Int              @id @default(autoincrement())
+  machineId    Int
+  Machine      Machine          @relation(fields: [machineId], references: [machineId])
+  productId    Int
+  Product      Product          @relation(fields: [productId], references: [productId])
+  quantity     Int
+  companyId    Int?
+  Company      Company?         @relation(fields: [companyId], references: [companyId])
+  adminId      Int
+  Admin        User             @relation(fields: [adminId], references: [userId])
+  status       Restock_Status
+  arrival_date DateTime?        @db.DateTime(0)
+  // transport_price Float?           @db.Float
+  // restock_price   Float?           @db.Float
+  date         DateTime         @db.DateTime(0)
+  observations String?          @db.VarChar(255)
+  claimedById  Int?
+  claimedBy    Provider?        @relation(fields: [claimedById], references: [providerId])
+  priority     Request_Priority
+  isVerified   Boolean?         @default(false)
 
   @@index([machineId], map: "machine")
   @@index([productId], map: "product")
-  @@index([providerId], map: "provider")
+  @@index([companyId], map: "company")
   @@index([adminId], map: "admin")
+  @@index([claimedById], map: "claimedBy")
 }
 
 model MaintenanceRequest {
-  maintenanceId Int                          @id @default(autoincrement())
+  maintenanceId Int                        @id @default(autoincrement())
   type          Machine_Maintenance_Type
-  priority      Machine_Maintenance_Priority
+  priority      Request_Priority
   status        Machine_Maintenance_Status
-  date          DateTime                     @db.DateTime(0)
+  date          DateTime                   @db.DateTime(0)
   machineId     Int
-  machine       Machine                      @relation(fields: [machineId], references: [machineId])
+  machine       Machine                    @relation(fields: [machineId], references: [machineId])
   adminId       Int
-  providerId    Int
-  provider      Provider                     @relation(fields: [providerId], references: [providerId])
-  admin         User                         @relation(fields: [adminId], references: [userId])
-  description   String                       @db.VarChar(255)
+  companyId     Int?
+  Company       Company?                   @relation(fields: [companyId], references: [companyId])
+  admin         User                       @relation(fields: [adminId], references: [userId])
+  observations  String?                    @db.VarChar(255)
+  claimedById   Int?
+  claimedBy     Provider?                  @relation(fields: [claimedById], references: [providerId])
+  isVerified    Boolean?                   @default(false)
 
   @@index([machineId], map: "machine")
-  @@index([providerId], map: "provider")
+  @@index([companyId], map: "company")
   @@index([adminId], map: "admin")
+  @@index([claimedById], map: "claimedBy")
 }
 
 model Feedback {
@@ -283,9 +298,10 @@ model Reservation {
 enum User_type {
   ADMINISTRATOR
   USER
+  PROVIDER
 }
 
-enum Provider_type {
+enum Company_type {
   SUPPLIER
   MAINTENANCE
 }
@@ -352,7 +368,7 @@ enum Machine_Maintenance_Type {
   OTHER
 }
 
-enum Machine_Maintenance_Priority {
+enum Request_Priority {
   LOW
   MEDIUM
   HIGH
