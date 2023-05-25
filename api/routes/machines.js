@@ -45,6 +45,9 @@ router.get('/:machineId', async (req, res) => {
 });
 
 
+
+
+
 router.post('/', (req, res, next) => {
         try {
 
