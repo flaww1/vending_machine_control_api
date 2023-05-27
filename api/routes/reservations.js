@@ -13,7 +13,7 @@ const {PrismaClient} = require('@prisma/client');
 const prisma = new PrismaClient();
 const {reservationValidator} = require("../../lib/validation");
 const {handlePaymentMethods} = require("../../lib/payment");
-const {getReservationById, getReservationByCode, getUserByuserId, getProductById} = require("../../lib/persistence");
+const {getReservationById, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId,getm} = require("../../lib/persistence");
 const handler = require('../../lib/handler');
 
 
@@ -172,81 +172,88 @@ router.post('/make-reservation/:productId', /*reservationValidator()*/ async (re
 
 
 
-    router.get('reservation/machine-display', (req, res) => {
-        const reservationCode = req.body.reservationCode;
+router.get('/machine-display/:reservationCode', async (req, res) => {
+    const reservationCode = req.params.reservationCode;
+    console.log('reservationCode:', reservationCode)
+    const reservation = await getReservationByCode(reservationCode);
+    console.log(reservation);
+    if (!reservation) {
+        return res.status(400).json({ error: 'Invalid reservation code' });
+    }
 
-        const reservation = getReservationByCode(reservationCode);
+    const product = await getProductByReservationId(reservation.reservationId);
 
-        if (!reservation) {
-            return res.status(400).json({error: 'Invalid reservation code'});
+    if (!product || !product.name || !product.price) {
+        return res.status(400).json({ error: 'Invalid product data' });
+    }
+
+    const { name: productName, price: productPrice } = product;
+
+    res.status(200).json({ productName, productPrice });
+});
+
+
+router.post('/payment/:reservationCode', async (req, res) => {
+    const reservationCode = req.params.reservationCode;
+    const paymentAmount = req.body.paymentAmount;
+
+    debugger;
+    try {
+        // Validate the reservation code against the database records
+        const reservation = await getReservationByCode(reservationCode);
+
+        if (reservation.paymentStatus === 'COMPLETED') {
+            return res.status(400).json({ error: 'Reservation already paid' });
         }
 
-        const product = reservation.product;
-        const productName = product.name;
-        const productPrice = product.price;
-        res.status(200).json([{productName, productPrice}]);
+        console.log('reservation total price:', reservation.total_price);
+        // Verify if the collected payment amount matches the total price of the reserved product
+        debugger;
+        if (paymentAmount >= reservation.total_price) {
+            // Update the reservation payment status to mark it as completed
+            await handlePaymentMethods(reservation);
 
-    });
 
-// Machine Payment Route
-    router.post('reservation/payment/:machineId', async (req, res) => {
-        const reservationCode = req.body.reservationCode;
-        const paymentAmount = req.body.paymentAmount;
-        const machineId = parseInt(req.params.machineId);
+            // Verify if the product is available in the machine
+            /*const isProductAvailable = await checkProductAvailabilityInMachine(reservation.machineId, reservation.productId);
+            debugger;
+            const quantityCheck = await checkProductQuantity(reservation.machineId, reservation.productId, reservation.quantity);
 
-        try {
-            // Validate the reservation code against the database records
-            const reservation = getReservationByCode(reservationCode);
-
-            if (reservation.paymentStatus === reservation.PaymentStatus.COMPLETED) {
-                return res.status(400).json({error: 'Reservation already paid'});
+            // double-checking the quantity and availability of the product
+            if (!quantityCheck) {
+                return res.status(400).json({error: 'The machine does not have enough quantity of the requested product'});
             }
 
-            // Verify if the collected payment amount matches the total price of the reserved product
-            if (paymentAmount === reservation.total_price) {
+            if (!isProductAvailable) {
+                return res.status(400).json({error: 'Product is unavailable in the machine'});
+            }*/
 
-                await handlePaymentMethods(reservation);
+            // Update the reservation payment status to mark it as completed
+            await updateReservationPaymentStatus(reservation.reservationId, 'COMPLETED');
 
-                // Verify if the product is available in the machine
-                const isProductAvailable = await checkProductAvailabilityInMachine(machineId, reservation.productId);
-                const quantityCheck = await checkProductQuantity(machineId, reservation.productId, reservation.quantity);
+            // Update the reservation status to mark it as completed
+            await updateReservationStatus(reservation.reservationId, 'COMPLETED');
 
-                // double-checking the quantity and availability of the product
-                if (!quantityCheck) {
-                    return res.status(400).json({error: 'The machine does not have enough quantity of the requested product'});
-                }
+            // Update the reservation code status to mark it as used
+            await updateReservationCodeStatus(reservationCode, 'USED');
 
-                if (!isProductAvailable) {
-                    return res.status(400).json({error: 'Product is unavailable in the machine'});
-                }
+            // Simulating the product dispensing process
+            await dispenseProduct(reservation);
 
-                // Update the reservation payment status to mark it as completed
-                await updateReservationPaymentStatus(reservation.reservationId, 'COMPLETED');
+            return res.json({message: 'Payment successful'});
+        } else {
+            return res.status(400).json({ error: 'Insufficient payment amount' });
 
-                // Update the reservation status to mark it as completed
-                await updateReservationStatus(reservation.reservationId, 'COMPLETED');
-
-                // Update the reservation code status to mark it as used
-                await updateReservationCodeStatus(reservation.reservationId, 'USED');
-
-                // Simulating the product dispensing process
-                await dispenseProduct(reservation);
-
-                return res.json({message: 'Payment successful'});
-            } else {
-                return res.status(400).json({error: 'Invalid payment amount'});
-
-            }
-
-
-        } catch (error) {
-            console.error('Error while processing machine payment:', error);
-            res.status(500).json({error: 'An error occurred while processing the payment'});
         }
 
 
-    });
+    } catch (error) {
+        console.error('Error while processing machine payment:', error);
+        res.status(500).json({error: 'An error occurred while processing the payment'});
+    }
 
+
+});
 
 
 
@@ -281,8 +288,8 @@ router.post('/make-reservation/:productId', /*reservationValidator()*/ async (re
     })
 
 // Reservation cancellation route
-    router.patch('/reservation/cancel/:reservationId', async (req, res) => {
-        const reservationId = req.params.reservationId;
+    router.patch('/cancel/:reservationId', async (req, res) => {
+        const reservationId = parseInt(req.params.reservationId);
 
         try {
             // Check if the reservation exists
