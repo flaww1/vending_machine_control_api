@@ -6,6 +6,8 @@ const request = require("../../lib/request");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const authentication = require("../../lib/authentication");
+
 
 /**** PROVIDER DASHBOARD ROUTES ****/
 
@@ -65,7 +67,7 @@ router.post('/provider/requests/claim/:requestId', async (req, res) => {
         const provider = parseInt(req.provider.userId);
 
         if (!provider) {
-            return res.status(404).json({ error: 'Provider not found' });
+            return res.status(404).json({error: 'Provider not found'});
         }
 
         const requestId = req.params.requestId;
@@ -76,28 +78,28 @@ router.post('/provider/requests/claim/:requestId', async (req, res) => {
             const claimedRequest = await request.claimMaintenanceRequest(requestId, provider.providerId);
 
             if (!claimedRequest) {
-                return res.status(404).json({ error: 'Request not found' });
+                return res.status(404).json({error: 'Request not found'});
             }
 
-            return res.json({ claimedRequest });
+            return res.json({claimedRequest});
 
         } else if (provider.Company.type === 'SUPPLIER') {
             // Claim restock request
             const claimedRequest = await request.claimRestockRequest(requestId, provider.providerId);
 
             if (!claimedRequest) {
-                return res.status(404).json({ error: 'Request not found' });
+                return res.status(404).json({error: 'Request not found'});
             }
 
-            return res.json({ claimedRequest });
+            return res.json({claimedRequest});
 
         } else {
             // Invalid or unsupported company type
-            return res.status(400).json({ error: 'Invalid company type' });
+            return res.status(400).json({error: 'Invalid company type'});
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({error: 'Internal server error'});
     }
 });
 
@@ -106,16 +108,16 @@ router.get('/provider/requests/claimed', async (req, res) => {
         const providerId = parseInt(req.provider.userId); // Get the provider ID from the logged-in user or authentication mechanism
 
         // Find the claimed requests for the provider
-        const claimedRequests = await Request.find({ isClaimedBy: providerId });
+        const claimedRequests = await Request.find({isClaimedBy: providerId});
 
-        return res.json({ claimedRequests });
+        return res.json({claimedRequests});
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({error: 'Internal server error'});
     }
 });
 
-const { PrismaClient } = require('@prisma/client');
+const {PrismaClient} = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -150,7 +152,7 @@ router.put('/provider/requests/:requestId', async (req, res) => {
                 },
             });
 
-            return res.json({ message: 'Maintenance request updated successfully' });
+            return res.json({message: 'Maintenance request updated successfully'});
         } else if (restockRequest) {
 
             await prisma.restockRequest.update({
@@ -164,24 +166,17 @@ router.put('/provider/requests/:requestId', async (req, res) => {
                 },
             });
 
-            return res.json({ message: 'Restock request updated successfully' });
+            return res.json({message: 'Restock request updated successfully'});
         } else {
             // Request not found
-            return res.status(404).json({ error: 'Request not found' });
+            return res.status(404).json({error: 'Request not found'});
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({error: 'Internal server error'});
     }
 
 });
-
-
-
-
-
-
-
 
 
 /**** ADMIN DASHBOARD ROUTES ****/
@@ -195,19 +190,17 @@ router.post('/admin/', /* authentication.check, authorization.check */ (req, res
 
 // Define a route for creating maintenance requests
 
-router.post('/admin/maintenance-request', /*maintenanceRequestValidator()*/ async (req, res) => { // add validation and authetication
+router.post('/admin/maintenance-request/', authentication.check, /*maintenanceRequestValidator()*/ async (req, res) => { // add validation and authetication
     try {
 
         const adminId = parseInt(req.user.userId);
+        //const adminId = 6;
         const maintenanceRequest = await request.createMaintenanceRequest({
-            data: {
-                type: req.body.type,
-                priority: req.body.priority,
-                observations: req.body.observations,
-                machineId: req.body.machineId,
-                adminId: adminId,
-
-            },
+            type: req.body.type,
+            priority: req.body.priority,
+            observations: req.body.observations,
+            machineId: parseInt(req.body.machineId),
+            adminId: adminId,
         });
 
         const machineCheck = await persistence.getMachineById(maintenanceRequest.machineId);
@@ -268,13 +261,12 @@ router.get('/admin/requests', async (req, res) => {
             },
         });
 
-        return res.json({ maintenanceRequests, restockRequests });
+        return res.json({maintenanceRequests, restockRequests});
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({error: 'Internal server error'});
     }
 });
-
 
 
 router.put('/admin/requests/:requestId/verify', async (req, res) => {
@@ -283,34 +275,34 @@ router.put('/admin/requests/:requestId/verify', async (req, res) => {
         const requestId = req.params.requestId;
 
         if (!adminId) {
-            return res.status(404).json({ error: 'Admin not found' });
+            return res.status(404).json({error: 'Admin not found'});
         }
         const maintenanceRequest = await prisma.maintenanceRequest.findUnique({
-            where: { id: requestId },
-            include: { machine: { include: { machineModel: true } } },
+            where: {id: requestId},
+            include: {machine: {include: {machineModel: true}}},
         });
 
         const restockRequest = await prisma.restockRequest.findUnique({
-            where: { id: requestId },
-            include: { machine: { include: { machineModel: true } } },
+            where: {id: requestId},
+            include: {machine: {include: {machineModel: true}}},
         });
 
         if (!maintenanceRequest && !restockRequest) {
-            return res.status(404).json({ error: 'Request not found' });
+            return res.status(404).json({error: 'Request not found'});
         }
 
         if (maintenanceRequest && maintenanceRequest.isVerified) {
-            return res.status(400).json({ error: 'Maintenance request is already verified' });
+            return res.status(400).json({error: 'Maintenance request is already verified'});
         }
 
         if (restockRequest && restockRequest.isVerified) {
-            return res.status(400).json({ error: 'Restock request is already verified' });
+            return res.status(400).json({error: 'Restock request is already verified'});
         }
 
         // Update the request to mark it as verified
         if (maintenanceRequest) {
             await prisma.maintenanceRequest.update({
-                where: { id: requestId },
+                where: {id: requestId},
                 data: {
                     isVerified: true,
                     status: 'COMPLETED',
@@ -319,7 +311,7 @@ router.put('/admin/requests/:requestId/verify', async (req, res) => {
         } else if (restockRequest) {
             // Update the request to mark it as verified
             await prisma.restockRequest.update({
-                where: { id: requestId },
+                where: {id: requestId},
                 data: {
                     isVerified: true,
                     status: 'COMPLETED',
@@ -333,8 +325,8 @@ router.put('/admin/requests/:requestId/verify', async (req, res) => {
 
             // Find the shelves associated with the machine model
             const shelves = await prisma.shelf.findMany({
-                where: { machineModelId: machineModel.id },
-                orderBy: { shelfNumber: 'asc' },
+                where: {machineModelId: machineModel.id},
+                orderBy: {shelfNumber: 'asc'},
             });
 
             // Iterate over the shelves and update their product and quantity fields
@@ -344,7 +336,7 @@ router.put('/admin/requests/:requestId/verify', async (req, res) => {
                 const fillQuantity = Math.min(remainingQuantity - filledQuantity, availableSpace);
 
                 await prisma.shelf.update({
-                    where: { id: shelf.id },
+                    where: {id: shelf.id},
                     data: {
                         product: restockRequest.product,
                         quantity: shelf.quantity + fillQuantity,
@@ -360,15 +352,12 @@ router.put('/admin/requests/:requestId/verify', async (req, res) => {
         }
 
 
-        return res.json({ message: 'Request verification completed successfully' });
+        return res.json({message: 'Request verification completed successfully'});
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({error: 'Internal server error'});
     }
 });
-
-
-
 
 
 /* PROVIDER ROUTES */

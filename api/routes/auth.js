@@ -38,7 +38,7 @@ router.post('/login', (req, res, next) => {
             console.log('Authentication failed.');
             return res.status(401).json({message: info.message});
         }
-        const token = jwt.sign({userId: user.userId}, 'JWT_SECRET', {expiresIn: process.env.JWT_EXPIRATION});
+        const token = jwt.sign({userId: user.userId}, process.env.JWT_SECRET, {expiresIn: process.env.JWT_EXPIRATION});
         // User authentication succeeded
         req.login(user, (err) => {
             if (err) {
@@ -111,6 +111,7 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
             last_name: req.body.last_name,
             password: hashedPassword,
             email: req.body.email,
+            type: req.body.type,
 
 
         });

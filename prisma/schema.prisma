@@ -14,7 +14,7 @@ model User {
   last_name          String               @db.VarChar(255)
   password           String               @db.VarChar(255)
   email              String               @unique(map: "email") @db.VarChar(255)
-  type               User_type            @default(USER)
+  type               User_type
   registration_date  DateTime             @db.DateTime(0)
   isVerified         Boolean              @default(false)
   Feedback           Feedback[]
@@ -198,11 +198,6 @@ model MaintenanceRequest {
   claimedById   Int?
   claimedBy     Provider?                  @relation(fields: [claimedById], references: [providerId])
   isVerified    Boolean?                   @default(false)
-
-  @@index([machineId], map: "machine")
-  @@index([companyId], map: "company")
-  @@index([adminId], map: "admin")
-  @@index([claimedById], map: "claimedBy")
 }
 
 model Feedback {
