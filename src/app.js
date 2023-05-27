@@ -65,6 +65,7 @@ const productRoutes = require('../api/routes/products');
 const userRoutes = require('../api/routes/users');
 const indexRoutes = require('../api/routes/index');
 const dashboardRoutes = require('../api/routes/dashboard');
+const reservationRoutes = require('../api/routes/reservations');
 
 const { scheduleReservationExpirationTask } = require('../lib/tasks');
 scheduleReservationExpirationTask();
@@ -78,7 +79,7 @@ app.use('/products', productRoutes);
 app.use('/users', userRoutes);
 app.use('/index', indexRoutes);
 app.use('/dashboard', dashboardRoutes);
-
+app.use('/reservations', reservationRoutes);
 
 
 

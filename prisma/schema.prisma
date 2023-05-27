@@ -14,7 +14,7 @@ model User {
   last_name          String               @db.VarChar(255)
   password           String               @db.VarChar(255)
   email              String               @unique(map: "email") @db.VarChar(255)
-  type               User_type
+  type               User_type            @default(USER)
   registration_date  DateTime             @db.DateTime(0)
   isVerified         Boolean              @default(false)
   Feedback           Feedback[]
@@ -102,13 +102,12 @@ model Machine {
 }
 
 model Product {
-  productId   Int          @id @default(autoincrement())
-  name        String       @db.VarChar(255)
-  image_uri   String       @db.VarChar(1000)
-  description String       @db.VarChar(255)
-  type        Product_Type
-  price       Float        @db.Float
-
+  productId        Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  image_uri        String             @db.VarChar(1000)
+  description      String             @db.VarChar(255)
+  type             Product_Type
+  price            Float              @db.Float
   Feedback         Feedback[]
   Product_Shelf    Product_Shelf[]
   reservation      Reservation[]
