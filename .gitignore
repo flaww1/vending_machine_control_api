@@ -74,4 +74,6 @@ typings/
 
 .idea/
 
-.jest.config.js
+jest.config.js
+
+dataseeder.js

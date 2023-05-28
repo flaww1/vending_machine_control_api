@@ -115,7 +115,7 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
 
 
         });
-        const secretKey = 'JWT_SECRET';
+        const secretKey = process.env.JWT_SECRET;
         // Generate a new JWT token for the registered user
         const verificationToken = jwt.sign(email, secretKey);
 
@@ -139,7 +139,7 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
 // Only a logged in user can access this route, email verification is only for users to be able to make transactions
 router.post('/verify-email' /*,authentication.check*/, verifyEmailValidator(), (req, res) => {
     // Generate a verification token
-    const secretKey = 'JWT_SECRET'; // Replace with your actual secret key
+    const secretKey = process.env.JWT_SECRET; // Replace with your actual secret key
     const payload = {
         email: req.body.email,
         isVerified: false,
@@ -157,7 +157,7 @@ router.get('/verify/:verificationToken' /*,authentication.check*/, (req, res) =>
     const verificationToken = req.params.verificationToken;
 
     try {
-        const secretKey = 'JWT_SECRET';
+        const secretKey = process.env.JWT_SECRET;
         const decodedToken = jwt.verify(verificationToken, secretKey);
 
         // Update user's email verification status in the database
@@ -182,7 +182,7 @@ router.get('/verify/:verificationToken' /*,authentication.check*/, (req, res) =>
 });
 
 router.post('/password-reset' /*,authentication.check*/, passwordResetValidator(), async (req, res) => {
-    const secretKey = 'JWT_SECRET';
+    const secretKey = process.env.JWT_SECRET;
     const payload = {
         email: req.body.email,
 
@@ -200,7 +200,7 @@ router.post('/reset-password/:resetToken', async (req, res) => {
     const password = req.body.password;
 
     try {
-        const secretKey = 'JWT_SECRET';
+        const secretKey = process.env.JWT_SECRET;
         const decodedToken = jwt.verify(resetToken, secretKey);
 
 
