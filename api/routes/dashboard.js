@@ -199,11 +199,16 @@ router.post('/admin/maintenance-request/', authentication.check, /*maintenanceRe
             type: req.body.type,
             priority: req.body.priority,
             observations: req.body.observations,
-            machineId: parseInt(req.body.machineId),
+            machineId: Number(req.body.machineId),
             adminId: adminId,
         });
 
-        const machineCheck = await persistence.getMachineById(maintenanceRequest.machineId);
+
+        const machineCheck = await prisma.machine.findUnique({
+            where: {
+                machineId: maintenanceRequest.machineId,
+            }
+        });
         if (!machineCheck) {
             return res.status(404).json({error: 'Machine not found'});
         }
@@ -216,35 +221,32 @@ router.post('/admin/maintenance-request/', authentication.check, /*maintenanceRe
     }
 });
 
-
-router.post('/admin/restock-request', async (req, res) => {
+router.post('/admin/restock-request', authentication.check, async (req, res) => {
 
     try {
 
         const adminId = parseInt(req.user.userId);
-        const restockRequest = await request.createRestockRequest({
-            data: {
-                quantity: req.body.quantity,
-                productId: req.body.productId,
-                adminId: adminId,
-                machineId: req.body.machineId,
-                observations: req.body.observations,
 
-            },
+        const restockRequest = await request.createRestockRequest({
+            productId: req.body.productId,
+            adminId: adminId,
+            machineId: Number(req.body.machineId),
+            observations: req.body.observations,
+            quantity: Number(req.body.quantity),
+            priority: req.body.priority,
         });
 
-        const machineCheck = await persistence.getMachineById(restockRequest.machineId);
-        if (!machineCheck) {
-            return res.status(404).json({error: 'Machine not found'});
-        }
 
-        return res.status(201).json({message: 'Restock request created successfully', maintenanceRequest});
+        return res.status(201).json({message: 'Restock request created successfully', restockRequest});
 
     } catch (error) {
         console.error('Error creating restock request:', error);
         res.status(500).json({error: 'An error occurred while creating the restock request'});
     }
 });
+
+
+
 
 router.get('/admin/requests', async (req, res) => {
     try {
