@@ -13,10 +13,10 @@ const authentication = require("../../lib/authentication");
 
 // Assuming you have Prisma Client configured and imported as `prisma`
 
-router.get('/provider/requests', async (req, res) => {
+router.get('/provider/requests', authentication.check ,async (req, res) => {
     try {
         // Retrieve provider information based on the logged-in user or authentication mechanism
-        const provider = parseInt(req.provider.userId);
+        const provider = parseInt(req.user.userId);
 
         if (!provider) {
             return res.status(404).json({error: 'Provider not found'});
@@ -61,51 +61,62 @@ router.get('/provider/requests', async (req, res) => {
     }
 });
 
-router.post('/provider/requests/claim/:requestId', async (req, res) => {
+router.post('/provider/requests/claim/:requestId', authentication.check, async (req, res) => {
     try {
         // Retrieve provider information based on the logged-in user or authentication mechanism
-        const provider = parseInt(req.provider.userId);
+        const id = 13;
+        const provider = await prisma.provider.findFirst({
+            where: {
+
+               // userId: Number(req.user.userId),
+                userId: id,
+            },
+            include: {
+                Company: true,
+            },
+        },
+        );
 
         if (!provider) {
-            return res.status(404).json({error: 'Provider not found'});
+            return res.status(404).json({ error: 'Provider not found' });
         }
 
-        const requestId = req.params.requestId;
+        const requestId = Number(req.params.requestId);
 
         // Check the provider's company type
         if (provider.Company.type === 'MAINTENANCE') {
             // Claim maintenance request
-            const claimedRequest = await request.claimMaintenanceRequest(requestId, provider.providerId);
+            const claimedRequest = await request.claimMaintenanceRequest(requestId, provider.providerId, provider.companyId);
 
             if (!claimedRequest) {
-                return res.status(404).json({error: 'Request not found'});
+                return res.status(404).json({ error: 'Request not found' });
             }
 
-            return res.json({claimedRequest});
+            return res.json({ claimedRequest });
 
         } else if (provider.Company.type === 'SUPPLIER') {
             // Claim restock request
-            const claimedRequest = await request.claimRestockRequest(requestId, provider.providerId);
+            const claimedRequest = await request.claimRestockRequest(requestId, provider.providerId, provider.companyId);
 
             if (!claimedRequest) {
-                return res.status(404).json({error: 'Request not found'});
+                return res.status(404).json({ error: 'Request not found' });
             }
 
-            return res.json({claimedRequest});
+            return res.json({ claimedRequest });
 
         } else {
             // Invalid or unsupported company type
-            return res.status(400).json({error: 'Invalid company type'});
+            return res.status(400).json({ error: 'Invalid company type' });
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).json({error: 'Internal server error'});
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 router.get('/provider/requests/claimed', async (req, res) => {
     try {
-        const providerId = parseInt(req.provider.userId); // Get the provider ID from the logged-in user or authentication mechanism
+        const providerId = parseInt(req.user.userId); // Get the provider ID from the logged-in user or authentication mechanism
 
         // Find the claimed requests for the provider
         const claimedRequests = await Request.find({isClaimedBy: providerId});
@@ -248,18 +259,23 @@ router.post('/admin/restock-request', authentication.check, async (req, res) => 
 
 
 
-router.get('/admin/requests', async (req, res) => {
+router.get('/admin/requests', authentication.check, async (req, res) => {
     try {
-        const adminId = req.admin.userId;
+        const adminId = parseInt(req.user.userId);
         const maintenanceRequests = await prisma.maintenanceRequest.findMany({
             where: {
-                adminId: adminId,
+
+                    adminId: adminId,
+
+
             },
         });
 
         const restockRequests = await prisma.restockRequest.findMany({
             where: {
-                adminId: adminId,
+
+                    adminId: adminId,
+
             },
         });
 
@@ -386,14 +402,14 @@ router.get('/admin/providers', (req, res) => {
 
 
 // only admins can create providers, they also give them a password
-router.get('/admin/create-provider', async (req, res) => {
+router.post('/admin/create-provider', async (req, res) => {
     // Implement logic for creating a provider
     const {email, password} = req.body;
     try {
 
         const existingProvider = await persistence.getProviderByEmail(email, false);
 
-        if (existingProdiver) {
+        if (existingProvider) {
             return res.status(400).json({message: 'Email already exists.'});
         }
 
@@ -409,16 +425,14 @@ router.get('/admin/create-provider', async (req, res) => {
                     last_name: req.body.last_name,
                     email: req.body.email,
                     phone: req.body.phone,
-                    company: req.body.company,
+                    companyId: Number(req.body.companyId),
                     password: hashedPassword,
 
                 }
             )
-            .then((providerData) => {
-                res.status(200).json(providerData);
-            });
 
-        const secretKey = 'JWT_SECRET';
+
+        const secretKey = process.env.JWT_SECRET;
         // Generate a new JWT token for the registered user
         const verificationToken = jwt.sign(email, secretKey);
 
@@ -433,16 +447,16 @@ router.get('/admin/create-provider', async (req, res) => {
     }
 });
 
-router.get('/admin/update-provider/:providerId', async (req, res) => {
+router.put('/admin/update-provider/:providerId', async (req, res) => {
     // Implement logic for updating a provider
     try {
-        const provider = await persistence.getProviderById(req.params.providerId);
+        const provider = await persistence.getProviderById(Number(req.params.providerId));
         if (!provider) {
             return res.status(404).json({error: 'Provider not found'});
         }
 
         const updatedProvider = await persistence.updateProvider(
-            req.params.providerId,
+            Number(req.params.providerId),
             req.body,
         );
 
