@@ -93,7 +93,6 @@ model Machine {
   // longitude           Float                 @db.Float
 
   MaintenanceRequest MaintenanceRequest[]
-  Product            Product[]
   Shelf              Shelf[]
   reservation_Cart   reservation_Cart[]
   Feedback_Machine   Feedback_Machine[]
@@ -114,8 +113,6 @@ model Product {
   reservation_Cart reservation_Cart[]
   RestockRequest   RestockRequest[]
   Wishlist         Wishlist[]
-  Machine          Machine?           @relation(fields: [machineMachineId], references: [machineId])
-  machineMachineId Int?
   Feedback_Product Feedback_Product[]
 
   @@index([name], map: "name")
@@ -168,18 +165,12 @@ model RestockRequest {
   arrival_date DateTime?        @db.DateTime(0)
   // transport_price Float?           @db.Float
   // restock_price   Float?           @db.Float
-  date         DateTime         @db.DateTime(0)
+  date         DateTime         @default(now())
   observations String?          @db.VarChar(255)
   claimedById  Int?
   claimedBy    Provider?        @relation(fields: [claimedById], references: [providerId])
   priority     Request_Priority
   isVerified   Boolean?         @default(false)
-
-  @@index([machineId], map: "machine")
-  @@index([productId], map: "product")
-  @@index([companyId], map: "company")
-  @@index([adminId], map: "admin")
-  @@index([claimedById], map: "claimedBy")
 }
 
 model MaintenanceRequest {
@@ -187,7 +178,7 @@ model MaintenanceRequest {
   type          Machine_Maintenance_Type
   priority      Request_Priority
   status        Machine_Maintenance_Status
-  date          DateTime                   @db.DateTime(0)
+  date          DateTime                   @default(now())
   machineId     Int
   machine       Machine                    @relation(fields: [machineId], references: [machineId])
   adminId       Int
