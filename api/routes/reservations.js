@@ -12,15 +12,16 @@ const {PrismaClient} = require('@prisma/client');
 
 const prisma = new PrismaClient();
 const {reservationValidator} = require("../../lib/validation");
-const {handlePaymentMethods} = require("../../lib/payment");
+const {handlePaymentMethods, initiateRefund} = require("../../lib/payment");
 const {getReservationById, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId,getm} = require("../../lib/persistence");
 const handler = require('../../lib/handler');
 
-
+const authentication = require('../../lib/authentication');
+const authorization = require('../../lib/authorization');
 const router = express.Router();
 
 // Define the reservation endpoint
-router.post('/make-reservation/:productId', /*reservationValidator()*/ async (req, res) => {
+router.post('/make-reservation/:productId', authentication.check, authorization.isUserOrAdmin,/*reservationValidator()*/ async (req, res) => {
     const product = await prisma.Product.findUnique({
         where: { productId: Number(req.params.productId) },
     });
@@ -172,7 +173,7 @@ router.post('/make-reservation/:productId', /*reservationValidator()*/ async (re
 
 
 
-router.get('/machine-display/:reservationCode', async (req, res) => {
+router.get('/machine-display/:reservationCode', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
     const reservationCode = req.params.reservationCode;
     console.log('reservationCode:', reservationCode)
     const reservation = await getReservationByCode(reservationCode);
@@ -193,7 +194,7 @@ router.get('/machine-display/:reservationCode', async (req, res) => {
 });
 
 
-router.post('/payment/:reservationCode', async (req, res) => {
+router.post('/payment/:reservationCode', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
     const reservationCode = req.params.reservationCode;
     const paymentAmount = req.body.paymentAmount;
 
@@ -257,7 +258,7 @@ router.post('/payment/:reservationCode', async (req, res) => {
 
 
 
-    router.post('/payments/webhook', async (req, res) => {
+    router.post('/payments/webhook', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
 
         let event = req.body
 
@@ -280,15 +281,8 @@ router.post('/payment/:reservationCode', async (req, res) => {
 
     })
 
-    router.get('/payments/config', /*authentication.check*/ (req, res) => {
-        // Serving publishable key
-        return res.status(200).json({
-            publishable_key: process.env.STRIPE_PUBLISHABLE_KEY
-        })
-    })
-
 // Reservation cancellation route
-    router.patch('/cancel/:reservationId', async (req, res) => {
+    router.put('/cancel/:reservationId', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
         const reservationId = parseInt(req.params.reservationId);
 
         try {
@@ -319,6 +313,43 @@ router.post('/payment/:reservationCode', async (req, res) => {
             res.status(500).json({error: 'An error occurred while canceling the reservation'});
         }
     });
+
+router.put('/refund/:reservationId', authentication.check,authorization.isUserOrAdmin, async (req, res) => {
+    const reservationId = parseInt(req.params.reservationId);
+
+    try {
+        // Check if the reservation exists
+        const reservation = await getReservationById(reservationId);
+
+        if (!reservation) {
+            return res.status(404).json({ error: 'Reservation not found' });
+        }
+
+        // Check if the reservation has been paid
+        if (reservation.paymentStatus !== 'COMPLETED') {
+            return res.status(400).json({ error: 'Cannot cancel an unpaid reservation' });
+        }
+
+        // Initiate the refund
+        const refund = await initiateRefund(reservation.paymentIntentId);
+
+        // Update the reservation status to 'REFUNDED'
+        await updateReservationStatus(reservationId, 'REFUNDED');
+
+        // Update the payment status to 'REFUNDED'
+        await updateReservationPaymentStatus(reservationId, 'REFUNDED');
+
+        // Unlock the reserved product quantity
+        await unlockProductQuantity(reservation.productId, reservation.quantity);
+
+        return res.json({ message: 'Reservation canceled and refunded successfully', refund });
+    } catch (error) {
+        console.error('Error while canceling reservation:', error);
+        res.status(500).json({ error: 'An error occurred while refunding the reservation' });
+    }
+});
+
+
 
 
     module.exports = router;

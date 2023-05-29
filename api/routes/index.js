@@ -1,6 +1,5 @@
 const express = require('express');
 
-const machines = require('./machines');
 
 const router = express.Router();
 
@@ -10,6 +9,5 @@ router.get('/', (req, res) => {
   });
 });
 
-router.use('/machines', machines);
 
 module.exports = router;

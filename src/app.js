@@ -58,11 +58,9 @@ app.use(passport.session());
 module.exports.passport = passport; // Allow passport to be used by other routes
 
 /* Importing all API routes */
-const machineRoutes = require('../api/routes/machines');
-const feedbackRoutes = require('../api/routes/feedbacks');
+
 const authRoutes = require('../api/routes/auth');
-const productRoutes = require('../api/routes/products');
-const userRoutes = require('../api/routes/users');
+const storeRoutes = require('../api/routes/store');
 const indexRoutes = require('../api/routes/index');
 const dashboardRoutes = require('../api/routes/dashboard');
 const reservationRoutes = require('../api/routes/reservations');
@@ -72,11 +70,9 @@ scheduleReservationExpirationTask();
 
 
 
-app.use('/machines', machineRoutes);
-app.use('/feedbacks', feedbackRoutes);
+
 app.use('/auth', authRoutes);
-app.use('/products', productRoutes);
-app.use('/users', userRoutes);
+app.use('/store', storeRoutes);
 app.use('/index', indexRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/reservations', reservationRoutes);

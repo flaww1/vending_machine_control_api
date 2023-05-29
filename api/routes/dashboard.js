@@ -1,12 +1,14 @@
 const express = require('express');
 const persistence = require("../../lib/persistence");
-const {defaultErr} = require("../../lib/error");
+const {defaultErr, errorHandler} = require("../../lib/error");
 const router = express.Router();
 const request = require("../../lib/request");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const authorization = require("../../lib/authorization");
 const authentication = require("../../lib/authentication");
+const reservation = require("../../lib/reservation");
 
 const {PrismaClient} = require('@prisma/client');
 
@@ -14,7 +16,7 @@ const prisma = new PrismaClient();
 
 
 /**** PROVIDER DASHBOARD ROUTES ****/
-router.get('/provider/requests/', authentication.check, async (req, res) => {
+router.get('/provider/requests/', authentication.check, authorization.isProvider, async (req, res) => {
     try {
         //const provider = parseInt(req.user.userId); // Get the provider ID from the logged-in user or authentication mechanism
         const id = 13;
@@ -63,7 +65,7 @@ router.get('/provider/requests/', authentication.check, async (req, res) => {
     }
 });
 
-router.post('/provider/requests/claim/:requestId', authentication.check, async (req, res) => {
+router.post('/provider/requests/claim/:requestId', authentication.check, authorization.isProvider,async (req, res) => {
     try {
         // Retrieve provider information based on the logged-in user or authentication mechanism
         const id = 13;
@@ -117,7 +119,7 @@ router.post('/provider/requests/claim/:requestId', authentication.check, async (
 });
 
 
-router.put('/provider/requests/update-arrival-date/:requestId', authentication.check, async (req, res) => {
+router.put('/provider/requests/update-arrival-date/:requestId', authentication.check, authorization.isProvider,async (req, res) => {
     try {
         const requestId = Number(req.params.requestId);
         const arrivalDate = req.body.arrivalDate;
@@ -149,21 +151,21 @@ router.put('/provider/requests/update-arrival-date/:requestId', authentication.c
 });
 
 
-router.put('/provider/requests/:requestId', async (req, res) => {
+router.put('/provider/requests/:requestId', authentication.check,authorization.isProvider, async (req, res) => {
     try {
-        const requestId = req.params.requestId;
+        const requestId = Number(req.params.requestId);
 
         // Check if the request exists in the MaintenanceRequest table
         const maintenanceRequest = await prisma.maintenanceRequest.findUnique({
             where: {
-                id: requestId,
+                maintenanceId: requestId,
             },
         });
 
         // Check if the request exists in the RestockRequest table
         const restockRequest = await prisma.restockRequest.findUnique({
             where: {
-                id: requestId,
+                restockId: requestId,
             },
         });
 
@@ -172,7 +174,7 @@ router.put('/provider/requests/:requestId', async (req, res) => {
 
             await prisma.maintenanceRequest.update({
                 where: {
-                    id: requestId,
+                    maintenanceId: requestId,
                 },
                 data: {
                     observations: req.body.observations,
@@ -185,7 +187,7 @@ router.put('/provider/requests/:requestId', async (req, res) => {
 
             await prisma.restockRequest.update({
                 where: {
-                    id: requestId,
+                    restockId: requestId,
                 },
                 data: {
                     observations: req.body.observations,
@@ -209,16 +211,12 @@ router.put('/provider/requests/:requestId', async (req, res) => {
 
 /**** ADMIN DASHBOARD ROUTES ****/
 
-router.post('/admin/', /* authentication.check, authorization.check */ (req, res, next) => {
-    // Implement logic for admin CRUD operations
-});
-
 
 /* REQUEST ROUTES */
 
 // Define a route for creating maintenance requests
 
-router.post('/admin/maintenance-request/', authentication.check, /*maintenanceRequestValidator()*/ async (req, res) => { // add validation and authetication
+router.post('/admin/maintenance-request/', authentication.check,authorization.isAdmin, /*maintenanceRequestValidator()*/ async (req, res) => { // add validation and authetication
     try {
 
         const adminId = parseInt(req.user.userId);
@@ -249,7 +247,7 @@ router.post('/admin/maintenance-request/', authentication.check, /*maintenanceRe
     }
 });
 
-router.post('/admin/restock-request', authentication.check, async (req, res) => {
+router.post('/admin/restock-request', authentication.check,authorization.isAdmin, async (req, res) => {
 
     try {
 
@@ -274,7 +272,7 @@ router.post('/admin/restock-request', authentication.check, async (req, res) => 
 });
 
 
-router.get('/admin/requests', authentication.check, async (req, res) => {
+router.get('/admin/requests', authentication.check, authorization.isAdmin,async (req, res) => {
     try {
         const adminId = parseInt(req.user.userId);
         const maintenanceRequests = await prisma.maintenanceRequest.findMany({
@@ -302,7 +300,7 @@ router.get('/admin/requests', authentication.check, async (req, res) => {
 });
 
 
-router.put('/admin/requests/:requestType/:requestId/verify', authentication.check, async (req, res) => {
+router.put('/admin/requests/:requestType/:requestId/verify', authentication.check, authorization.isAdmin,async (req, res) => {
     try {
         const adminId = Number(req.user.userId);
         const requestType = req.params.requestType;
@@ -346,7 +344,7 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
 
         // Check if the request has been claimed
         if (request.claimedById === null) {
-            return res.status(400).json({ error: 'Request needs to be claimed before verification' });
+            return res.status(400).json({error: 'Request needs to be claimed before verification'});
         }
 
         // Update the request to mark it as verified
@@ -368,7 +366,7 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
             });
             if (isRestockRequest) {
                 const machineModel = await prisma.machineModel.findUnique({
-                    where: { modelId: request.Machine.model.modelId },
+                    where: {modelId: request.Machine.model.modelId},
                 });
 
                 // Calculate the remaining shelf quantity after filling the shelves
@@ -376,9 +374,9 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
 
                 // Find the shelves associated with the machine model
                 const shelves = await prisma.product_Shelf.findMany({
-                    where: { shelf: { machineId: request.machineId } },
-                    orderBy: { shelfId: 'asc' },
-                    include: { shelf: { include: { Machine: { include: { model: true } } } } },
+                    where: {shelf: {machineId: request.machineId}},
+                    orderBy: {shelfId: 'asc'},
+                    include: {shelf: {include: {Machine: {include: {model: true}}}}},
                 });
 
                 // Iterate over the shelves and update their product and quantity fields
@@ -392,7 +390,7 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
                     );
 
                     await prisma.product_Shelf.update({
-                        where: { product_shelfId: shelf.product_shelfId },
+                        where: {product_shelfId: shelf.product_shelfId},
                         data: {
                             quantity_inSlot: shelf.quantity_inSlot + fillQuantity,
                         },
@@ -413,14 +411,14 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
                             NOT: {
                                 Product_Shelf: {
                                     some: {
-                                        quantity_inSlot: { gt: 0 },
+                                        quantity_inSlot: {gt: 0},
                                     },
                                 },
                             },
                         },
-                        orderBy: { shelfId: 'asc' },
+                        orderBy: {shelfId: 'asc'},
                         include: {
-                            Machine: { include: { model: true } },
+                            Machine: {include: {model: true}},
                             Product_Shelf: true,
                         },
                     });
@@ -456,7 +454,6 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
             }
 
 
-
         }
 
 
@@ -470,7 +467,7 @@ router.put('/admin/requests/:requestType/:requestId/verify', authentication.chec
 
 /* PROVIDER ROUTES */
 
-router.get('/admin/providers', (req, res) => {
+router.get('/admin/providers', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for listing all providers
     try {
         persistence
@@ -492,7 +489,7 @@ router.get('/admin/providers', (req, res) => {
 
 
 // only admins can create providers, they also give them a password
-router.post('/admin/create-provider', async (req, res) => {
+router.post('/admin/create-provider', authentication.check,authorization.isAdmin, async (req, res) => {
     // Implement logic for creating a provider
     const {email, password} = req.body;
     try {
@@ -537,8 +534,9 @@ router.post('/admin/create-provider', async (req, res) => {
     }
 });
 
-router.put('/admin/update-provider/:providerId', async (req, res) => {
+router.put('/admin/update-provider/:providerId', authentication.check,authorization.isAdmin, async (req, res) => {
     // Implement logic for updating a provider
+
     try {
         const provider = await persistence.getProviderById(Number(req.params.providerId));
         if (!provider) {
@@ -558,7 +556,7 @@ router.put('/admin/update-provider/:providerId', async (req, res) => {
     }
 });
 
-router.get('/admin/delete-provider/:providerId', async (req, res) => {
+router.get('/admin/delete-provider/:providerId', authentication.check, authorization.isAdmin,async (req, res) => {
     // Implement logic for deleting a provider
     try {
         const provider = await persistence.getProviderById(req.params.providerId);
@@ -579,7 +577,7 @@ router.get('/admin/delete-provider/:providerId', async (req, res) => {
 
 /* COMPANY ROUTES */
 
-router.get('/admin/companies', (req, res) => {
+router.get('/admin/companies', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for listing all companies
     try {
         persistence
@@ -602,14 +600,13 @@ router.get('/admin/companies', (req, res) => {
     }
 });
 
-router.get('/admin/create-company', async (req, res) => {
+router.get('/admin/create-company', authentication.check,authorization.isAdmin, async (req, res) => {
     // Implement logic for creating a company
     try {
         const newCompany = await persistence
             .createCompany({
                     name: req.body.name,
                     nif: req.body.nif,
-                    address: req.body.address,
                     city: req.body.city,
                     country: req.body.country,
                     postal_code: req.body.postal_code,
@@ -617,13 +614,11 @@ router.get('/admin/create-company', async (req, res) => {
                     latitude: req.body.latitude,
                     longitude: req.body.longitude,
                     type: req.body.type,
-                    phone: req.body.phone,
+                    companyPhone: req.body.companyPhone,
                     companyEmail: req.body.companyEmail,
                 }
             )
-            .then((companyData) => {
-                res.status(200).json(companyData);
-            });
+
 
         return res.status(200).json({message: 'Company created successfully', newCompany});
 
@@ -633,16 +628,16 @@ router.get('/admin/create-company', async (req, res) => {
     }
 });
 
-router.get('/admin/update-company/:companyId', async (req, res) => {
+router.put('/admin/update-company/:companyId',authorization.isAdmin, authentication.check, async (req, res) => {
     // Implement logic for updating a company
     try {
-        const company = await persistence.getCompanyById(req.params.companyId);
+        const company = await persistence.getCompanyById(Number(req.params.companyId));
         if (!company) {
             return res.status(404).json({error: 'Company not found'});
         }
 
         const updatedCompany = await persistence.updateCompany(
-            req.params.companyId,
+            company.companyId,
             req.body,
         );
 
@@ -654,15 +649,15 @@ router.get('/admin/update-company/:companyId', async (req, res) => {
     }
 });
 
-router.get('/admin/delete-company/:companyId', async (req, res) => {
+router.delete('/admin/delete-company/:companyId',authorization.isAdmin, authentication.check, async (req, res) => {
     // Implement logic for deleting a company
     try {
-        const company = await persistence.getCompanyById(req.params.companyId);
+        const company = await persistence.getCompanyById(Number(req.params.companyId));
         if (!company) {
             return res.status(404).json({error: 'Company not found'});
         }
 
-        await persistence.deleteCompany(req.params.companyId);
+        await persistence.deleteCompany(company.companyId);
 
         return res.status(200).json({message: 'Company deleted successfully'});
 
@@ -675,7 +670,7 @@ router.get('/admin/delete-company/:companyId', async (req, res) => {
 
 /* PRODUCT ROUTES */
 
-router.get('/admin/products', (req, res) => {
+router.get('/admin/products', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for listing all products
     try {
         persistence
@@ -695,81 +690,325 @@ router.get('/admin/products', (req, res) => {
         res.status(500).send(defaultErr());
     }
 });
-router.get('/admin/create-product/:productId', (req, res) => {
-    // Implement logic for creating a product
+router.post('/admin/create-product', authentication.check, authorization.isAdmin,(req, res) => {
 
+        try {
+            persistence.createProducts(req.body)
+                .then((createdProduct) => {
+                    if (createdProduct) {
+                        res.status(200)
+                            .json(createdProduct);
+
+                    } else {
+                        res.status(400)
+                            .send({message: 'Invalid data. Make sure to include every field.'});
+                    }
+                });
+
+        } catch (e) {
+            console.log(e);
+            res.status(500).send(defaultErr());
+        }
+
+    }
+);
+
+
+router.put('/admin/update-product/:productId',authorization.isAdmin, (req, res) => {
+    const productId = parseInt(req.params.productId);
+
+    try {
+        persistence.updateProduct(productId, req.body)
+            .then((updatedProduct) => {
+                if (updatedProduct) {
+                    res.status(200)
+                        .json(updatedProduct);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/update-product/:productId', (req, res) => {
-    // Implement logic for updating a product
-});
+router.delete('/admin/delete-product/:productId', authorization.isAdmin,authentication.check, (req, res) => {
+    const productId = parseInt(req.params.productId);
 
-router.get('/admin/delete-product/:productId', (req, res) => {
-    // Implement logic for deleting a product
+    try {
+        persistence.deleteProduct(productId)
+            .then((deletedProduct) => {
+                    if (deletedProduct) {
+                        res.status(200)
+                            .json(deletedProduct);
+
+                    } else {
+                        res.status(400)
+                            .send({message: 'Invalid data. Make sure to include every field.'});
+                    }
+                }
+            );
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
 /* MACHINE ROUTES */
 
-router.get('/admin/machines', (req, res) => {
+router.get('/admin/machines', authentication.check,authorization.isAdmin, (req, res) => {
     // Implement logic for listing all machines
+    try {
+        persistence
+            .getAllMachines(
+                req.query.limit,
+                req.query.page,
+                req.query.keywords,
+                req.query.sort,
+                {min: req.query.min_price, max: req.query.max_price},
+                req.query.type,
+            )
+            .then((machineData) => {
+                res.status(200).json(machineData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/create-machine/:machineId', (req, res) => {
+router.post('/admin/create-machine', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for creating a machine
+    try {
+        persistence.createMachines(req.body)
+            .then((createdMachine) => {
+                if (createdMachine) {
+                    res.status(200)
+                        .json(createdMachine);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/update-machine/:machineId', (req, res) => {
+router.put('/admin/update-machine/:machineId', authentication.check,authorization.isAdmin, (req, res) => {
 
     // Implement logic for updating a machine
+    try {
+        const machine = persistence.getMachineById(Number(req.params.machineId));
+        persistence.updateMachine(machine.machineId, req.body)
+            .then((updatedMachine) => {
+                if (updatedMachine) {
+                    res.status(200)
+                        .json(updatedMachine);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/delete-machine/:machineId', (req, res) => {
+router.delete('/admin/delete-machine/:machineId', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for deleting a machine
+    try {
+        const machine = persistence.getMachineById(Number(req.params.machineId));
+        persistence.deleteMachine(machine.machineId)
+            .then((deletedMachine) => {
+                if (deletedMachine) {
+                    res.status(200)
+                        .json(deletedMachine);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
 /* USER ROUTES */
 
-router.get('/admin/users', (req, res) => {
+router.get('/admin/users', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for listing all users
+    try {
+        persistence.getAllUsers()
+            .then((userData) => {
+                res.status(200).json(userData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/create-user/:userId', (req, res) => {
+router.post('/admin/create-user', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for creating a user
+    try {
+
+        persistence.createUser(req.body)
+            .then((createdUser) => {
+                    if (createdUser) {
+                        res.status(200)
+                            .json(createdUser);
+
+                    } else {
+                        res.status(400)
+                            .send({message: 'Invalid data. Make sure to include every field.'});
+                    }
+                }
+            );
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/update-user/:userId', (req, res) => {
+router.put('/admin/update-user/:userId', authentication.check,authorization.isAdmin, (req, res) => {
     // Implement logic for updating a user
+    try {
+        const user = persistence.getUserById(Number(req.params.userId));
+        persistence.updateUser(user.userId, req.body)
+            .then((updatedUser) => {
+                if (updatedUser) {
+                    res.status(200)
+                        .json(updatedUser);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/delete-user/:userId', (req, res) => {
+router.delete('/admin/delete-user/:userId', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for deleting a user
+    try {
+        const user = persistence.getUserById(Number(req.params.userId));
+        persistence.deleteUser(user.userId)
+            .then((deletedUser) => {
+                if (deletedUser) {
+                    res.status(200)
+                        .json(deletedUser);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
 /* RESERVATION ROUTES */
 
-router.get('/admin/reservations', (req, res) => {
+router.get('/admin/reservations', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for listing all reservations
+    try {
+        reservation.getAllReservations()
+            .then((reservationData) => {
+                res.status(200).json(reservationData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/create-reservation/:reservationId', (req, res) => {
+router.post('/admin/create-reservation', authentication.check,authorization.isAdmin, (req, res) => {
     // Implement logic for creating a reservation
+    try {
+        reservation.createReservation(req.body)
+            .then((createdReservation) => {
+                if (createdReservation) {
+                    res.status(200)
+                        .json(createdReservation);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/update-reservation/:reservationId', (req, res) => {
+router.put('/admin/update-reservation/:reservationId', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for updating a reservation
+    try {
+        const reservationCheck = persistence.getReservationById(Number(req.params.reservationId));
+        reservation.updateReservation(reservationCheck.reservationId, req.body)
+            .then((updatedReservation) => {
+                if (updatedReservation) {
+                    res.status(200)
+                        .json(updatedReservation);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
-router.get('/admin/delete-reservation/:reservationId', (req, res) => {
+
+router.delete('/admin/delete-reservation/:reservationId', authentication.check,authorization.isAdmin, (req, res) => {
     // Implement logic for deleting a reservation
+    try {
+        const reservationCheck = persistence.getReservationById(Number(req.params.reservationId));
+        reservation.deleteReservation(reservationCheck.reservationId)
+            .then((deletedReservation) => {
+                if (deletedReservation) {
+                    res.status(200)
+                        .json(deletedReservation);
+
+                } else {
+                    res.status(400)
+                        .send({message: 'Invalid data. Make sure to include every field.'});
+                }
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
 });
 
 /* FEEDBACK ROUTES */
-
-router.get('/admin/feedbacks', (req, res) => {
+/*
+router.get('/admin/feedbacks', authentication.check, (req, res) => {
     // Implement logic for listing all feedbacks
 });
 
-router.get('/admin/create-feedback/:feedbackId', (req, res) => {
+
+router.get('/admin/create-feedback', (req, res) => {
     // Implement logic for creating a feedback
 });
 
@@ -781,7 +1020,7 @@ router.get('/admin/update-feedback/:feedbackId', (req, res) => {
 router.get('/admin/delete-feedback/:feedbackId', (req, res) => {
     // Implement logic for deleting a feedback
 });
-
+*/
 /* STOCK ROUTES */
 
 
