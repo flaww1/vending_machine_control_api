@@ -53,7 +53,7 @@ router.post('/login', (req, res, next) => {
     })(req, res, next);
 });
 
-router.post('/logout', async (req, res) => {
+router.post('/logout', authentication.check, async (req, res) => {
     if (req.user) {
         req.logout((err) => {
             if (err) {
@@ -137,7 +137,7 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
 
 // Route to handle email verification if the user doesnt verify it when registering
 // Only a logged in user can access this route, email verification is only for users to be able to make transactions
-router.post('/verify-email' /*,authentication.check*/, verifyEmailValidator(), (req, res) => {
+router.post('/verify-email' ,authentication.check, verifyEmailValidator(), (req, res) => {
     // Generate a verification token
     const secretKey = process.env.JWT_SECRET; // Replace with your actual secret key
     const payload = {
@@ -153,7 +153,7 @@ router.post('/verify-email' /*,authentication.check*/, verifyEmailValidator(), (
 
 // Route to handle email verification
 // Only a logged in user can access this route, email verification is only for users to be able to make transactions
-router.get('/verify/:verificationToken' /*,authentication.check*/, (req, res) => {
+router.get('/verify/:verificationToken' ,authentication.check, (req, res) => {
     const verificationToken = req.params.verificationToken;
 
     try {
@@ -181,7 +181,7 @@ router.get('/verify/:verificationToken' /*,authentication.check*/, (req, res) =>
     }
 });
 
-router.post('/password-reset' /*,authentication.check*/, passwordResetValidator(), async (req, res) => {
+router.post('/password-reset' ,authentication.check, passwordResetValidator(), async (req, res) => {
     const secretKey = process.env.JWT_SECRET;
     const payload = {
         email: req.body.email,
