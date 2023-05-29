@@ -8,55 +8,57 @@ const jwt = require("jsonwebtoken");
 
 const authentication = require("../../lib/authentication");
 
+const {PrismaClient} = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
 
 /**** PROVIDER DASHBOARD ROUTES ****/
-
-// Assuming you have Prisma Client configured and imported as `prisma`
-
-router.get('/provider/requests', authentication.check ,async (req, res) => {
+router.get('/provider/requests/', authentication.check, async (req, res) => {
     try {
-        // Retrieve provider information based on the logged-in user or authentication mechanism
-        const provider = parseInt(req.user.userId);
+        //const provider = parseInt(req.user.userId); // Get the provider ID from the logged-in user or authentication mechanism
+        const id = 13;
+        const provider = await prisma.provider.findFirst({
+                where: {
 
-        if (!provider) {
-            return res.status(404).json({error: 'Provider not found'});
-        }
-
-        let requests;
-
-
-        // Check the provider's company type
+                    // userId: Number(req.user.userId),
+                    userId: id,
+                },
+                include: {
+                    Company: true,
+                },
+            },
+        );
+        // Find the claimed requests for the provider
         if (provider.Company.type === 'MAINTENANCE') {
+            // Claim maintenance request
+            const requests = await request.getAllMaintenanceRequests(
+                req.query.limit, req.query.page, req.query.type, req.query.status, req.query.sort, req.priority, req.claimedById);
 
-            requests = await request.getAllMaintenanceRequests(
-                req.query.limit,
-                req.query.page,
-                req.query.type,
-                req.query.status,
-                req.query.sort,
-                req.priority,
-                req.isClaimed,
-            )
+            if (!requests) {
+                return res.status(404).json({error: 'Requests not found'});
+            }
 
+            return res.json({requests});
 
         } else if (provider.Company.type === 'SUPPLIER') {
-            requests = await request.getAllRestockRequests(
-                req.query.limit,
-                req.query.page,
-                req.query.sort,
-                req.query.status,
-                req.query.priority,
-                req.query.isClaimed,
-            )
+            // Claim restock request
+            const requests = await request.getAllRestockRequests(
+                req.query.limit, req.query.page, req.query.sort, req.query.status, req.query.priority, req.query.claimedById);
+
+            if (!requests) {
+                return res.status(404).json({error: 'Requests not found'});
+            }
+            return res.json({requests});
 
         } else {
             // Invalid or unsupported company type
             return res.status(400).json({error: 'Invalid company type'});
         }
 
-        return res.json({requests});
+
     } catch (error) {
-        console.error(error);
+        console.log(error);
         return res.status(500).json({error: 'Internal server error'});
     }
 });
@@ -66,19 +68,19 @@ router.post('/provider/requests/claim/:requestId', authentication.check, async (
         // Retrieve provider information based on the logged-in user or authentication mechanism
         const id = 13;
         const provider = await prisma.provider.findFirst({
-            where: {
+                where: {
 
-               // userId: Number(req.user.userId),
-                userId: id,
+                    // userId: Number(req.user.userId),
+                    userId: id,
+                },
+                include: {
+                    Company: true,
+                },
             },
-            include: {
-                Company: true,
-            },
-        },
         );
 
         if (!provider) {
-            return res.status(404).json({ error: 'Provider not found' });
+            return res.status(404).json({error: 'Provider not found'});
         }
 
         const requestId = Number(req.params.requestId);
@@ -89,48 +91,63 @@ router.post('/provider/requests/claim/:requestId', authentication.check, async (
             const claimedRequest = await request.claimMaintenanceRequest(requestId, provider.providerId, provider.companyId);
 
             if (!claimedRequest) {
-                return res.status(404).json({ error: 'Request not found' });
+                return res.status(404).json({error: 'Request not found'});
             }
 
-            return res.json({ claimedRequest });
+            return res.json({claimedRequest});
 
         } else if (provider.Company.type === 'SUPPLIER') {
             // Claim restock request
             const claimedRequest = await request.claimRestockRequest(requestId, provider.providerId, provider.companyId);
 
             if (!claimedRequest) {
-                return res.status(404).json({ error: 'Request not found' });
+                return res.status(404).json({error: 'Request not found'});
             }
 
-            return res.json({ claimedRequest });
+            return res.json({claimedRequest});
 
         } else {
             // Invalid or unsupported company type
-            return res.status(400).json({ error: 'Invalid company type' });
+            return res.status(400).json({error: 'Invalid company type'});
         }
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-router.get('/provider/requests/claimed', async (req, res) => {
-    try {
-        const providerId = parseInt(req.user.userId); // Get the provider ID from the logged-in user or authentication mechanism
-
-        // Find the claimed requests for the provider
-        const claimedRequests = await Request.find({isClaimedBy: providerId});
-
-        return res.json({claimedRequests});
     } catch (error) {
         console.error(error);
         return res.status(500).json({error: 'Internal server error'});
     }
 });
 
-const {PrismaClient} = require('@prisma/client');
 
-const prisma = new PrismaClient();
+router.put('/provider/requests/update-arrival-date/:requestId', authentication.check, async (req, res) => {
+    try {
+        const requestId = Number(req.params.requestId);
+        const arrivalDate = req.body.arrivalDate;
+
+        const restockRequest = await prisma.restockRequest.findUnique({
+            where: {
+                restockId: requestId,
+            },
+        });
+
+        if (!restockRequest) {
+            return res.status(404).json({error: 'Request not found'});
+        }
+
+        await prisma.restockRequest.update({
+            where: {
+                restockId: requestId,
+            },
+            data: {
+                arrivalDate: arrivalDate,
+            },
+        });
+
+        return res.json({message: 'Request updated successfully'});
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({error: 'Internal server error'});
+    }
+});
+
 
 router.put('/provider/requests/:requestId', async (req, res) => {
     try {
@@ -257,15 +274,13 @@ router.post('/admin/restock-request', authentication.check, async (req, res) => 
 });
 
 
-
-
 router.get('/admin/requests', authentication.check, async (req, res) => {
     try {
         const adminId = parseInt(req.user.userId);
         const maintenanceRequests = await prisma.maintenanceRequest.findMany({
             where: {
 
-                    adminId: adminId,
+                adminId: adminId,
 
 
             },
@@ -274,7 +289,7 @@ router.get('/admin/requests', authentication.check, async (req, res) => {
         const restockRequests = await prisma.restockRequest.findMany({
             where: {
 
-                    adminId: adminId,
+                adminId: adminId,
 
             },
         });
@@ -287,86 +302,161 @@ router.get('/admin/requests', authentication.check, async (req, res) => {
 });
 
 
-router.put('/admin/requests/:requestId/verify', async (req, res) => {
+router.put('/admin/requests/:requestType/:requestId/verify', authentication.check, async (req, res) => {
     try {
-        const adminId = req.admin.userId;
-        const requestId = req.params.requestId;
+        const adminId = Number(req.user.userId);
+        const requestType = req.params.requestType;
+        const requestId = Number(req.params.requestId);
 
         if (!adminId) {
             return res.status(404).json({error: 'Admin not found'});
         }
-        const maintenanceRequest = await prisma.maintenanceRequest.findUnique({
-            where: {id: requestId},
-            include: {machine: {include: {machineModel: true}}},
-        });
 
-        const restockRequest = await prisma.restockRequest.findUnique({
-            where: {id: requestId},
-            include: {machine: {include: {machineModel: true}}},
-        });
+        let request;
+        let isMaintenanceRequest;
+        let isRestockRequest;
 
-        if (!maintenanceRequest && !restockRequest) {
+        if (requestType === 'MAINTENANCE') {
+            request = await prisma.maintenanceRequest.findUnique({
+                where: {maintenanceId: requestId},
+                include: {machine: {include: {model: true}}},
+            });
+            isMaintenanceRequest = true;
+        } else if (requestType === 'RESTOCK') {
+            request = await prisma.restockRequest.findUnique({
+                where: {restockId: requestId},
+                include: {Machine: {include: {model: true}}},
+            });
+            isRestockRequest = true;
+        } else {
+            return res.status(400).json({error: 'Invalid request type'});
+        }
+
+        if (!request) {
             return res.status(404).json({error: 'Request not found'});
         }
 
-        if (maintenanceRequest && maintenanceRequest.isVerified) {
+        if (isMaintenanceRequest && request.isVerified) {
             return res.status(400).json({error: 'Maintenance request is already verified'});
         }
 
-        if (restockRequest && restockRequest.isVerified) {
+        if (isRestockRequest && request.isVerified) {
             return res.status(400).json({error: 'Restock request is already verified'});
         }
 
+        // Check if the request has been claimed
+        if (request.claimedById === null) {
+            return res.status(400).json({ error: 'Request needs to be claimed before verification' });
+        }
+
         // Update the request to mark it as verified
-        if (maintenanceRequest) {
+        if (isMaintenanceRequest) {
             await prisma.maintenanceRequest.update({
-                where: {id: requestId},
+                where: {maintenanceId: requestId},
                 data: {
                     isVerified: true,
                     status: 'COMPLETED',
                 },
             });
-        } else if (restockRequest) {
-            // Update the request to mark it as verified
+        } else {
             await prisma.restockRequest.update({
-                where: {id: requestId},
+                where: {restockId: requestId},
                 data: {
                     isVerified: true,
                     status: 'COMPLETED',
                 },
             });
-
-            const machineModel = restockRequest.machine.machineModel;
-
-            // Calculate the remaining shelf quantity after filling the shelves
-            const remainingQuantity = machineModel.shelfCapacity - restockRequest.quantity;
-
-            // Find the shelves associated with the machine model
-            const shelves = await prisma.shelf.findMany({
-                where: {machineModelId: machineModel.id},
-                orderBy: {shelfNumber: 'asc'},
-            });
-
-            // Iterate over the shelves and update their product and quantity fields
-            let filledQuantity = 0;
-            for (const shelf of shelves) {
-                const availableSpace = shelf.capacity - shelf.quantity;
-                const fillQuantity = Math.min(remainingQuantity - filledQuantity, availableSpace);
-
-                await prisma.shelf.update({
-                    where: {id: shelf.id},
-                    data: {
-                        product: restockRequest.product,
-                        quantity: shelf.quantity + fillQuantity,
-                    },
+            if (isRestockRequest) {
+                const machineModel = await prisma.machineModel.findUnique({
+                    where: { modelId: request.Machine.model.modelId },
                 });
 
-                filledQuantity += fillQuantity;
+                // Calculate the remaining shelf quantity after filling the shelves
+                let remainingQuantity = machineModel.shelfCapacity - request.quantity;
 
-                if (filledQuantity >= remainingQuantity) {
-                    break; // Stop filling shelves once the remaining quantity is reached
+                // Find the shelves associated with the machine model
+                const shelves = await prisma.product_Shelf.findMany({
+                    where: { shelf: { machineId: request.machineId } },
+                    orderBy: { shelfId: 'asc' },
+                    include: { shelf: { include: { Machine: { include: { model: true } } } } },
+                });
+
+                // Iterate over the shelves and update their product and quantity fields
+                let filledQuantity = 0;
+                for (const shelf of shelves) {
+                    const availableSpace =
+                        shelf.shelf.Machine.model.shelfCapacity - shelf.quantity_inSlot;
+                    const fillQuantity = Math.min(
+                        remainingQuantity - filledQuantity,
+                        availableSpace
+                    );
+
+                    await prisma.product_Shelf.update({
+                        where: { product_shelfId: shelf.product_shelfId },
+                        data: {
+                            quantity_inSlot: shelf.quantity_inSlot + fillQuantity,
+                        },
+                    });
+
+                    filledQuantity += fillQuantity;
+
+                    if (filledQuantity >= remainingQuantity) {
+                        break; // Stop filling shelves once the remaining quantity is reached
+                    }
+                }
+
+                // If there are still remaining quantities, create new shelves to store them
+                while (filledQuantity < remainingQuantity) {
+                    let availableShelf = await prisma.shelf.findFirst({
+                        where: {
+                            machineId: request.machineId,
+                            NOT: {
+                                Product_Shelf: {
+                                    some: {
+                                        quantity_inSlot: { gt: 0 },
+                                    },
+                                },
+                            },
+                        },
+                        orderBy: { shelfId: 'asc' },
+                        include: {
+                            Machine: { include: { model: true } },
+                            Product_Shelf: true,
+                        },
+                    });
+
+                    if (!availableShelf) {
+                        // No empty shelves available, break out of the loop
+                        console.log('No more empty shelves available');
+                        break;
+                    }
+
+                    const availableSpace =
+                        availableShelf.Machine.model.shelfCapacity -
+                        availableShelf.Product_Shelf.reduce(
+                            (total, ps) => total + ps.quantity_inSlot,
+                            0
+                        );
+                    const fillQuantity = Math.min(
+                        remainingQuantity - filledQuantity,
+                        availableSpace
+                    );
+
+                    await prisma.product_Shelf.create({
+                        data: {
+                            shelfId: availableShelf.shelfId,
+                            productId: request.productId,
+                            quantity_inSlot: fillQuantity,
+                        },
+                    });
+
+                    filledQuantity += fillQuantity;
+                    remainingQuantity = machineModel.shelfCapacity - (request.quantity + filledQuantity);
                 }
             }
+
+
+
         }
 
 
