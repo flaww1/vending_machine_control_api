@@ -759,7 +759,7 @@ router.delete('/admin/delete-product/:productId', authorization.isAdmin,authenti
 
 /* MACHINE ROUTES */
 
-router.get('/admin/machines', authentication.check,authorization.isAdmin, (req, res) => {
+router.get('/admin/machines',  authentication.check,authorization.isAdmin, (req, res) => {
     // Implement logic for listing all machines
     try {
         persistence
@@ -768,8 +768,9 @@ router.get('/admin/machines', authentication.check,authorization.isAdmin, (req, 
                 req.query.page,
                 req.query.keywords,
                 req.query.sort,
-                {min: req.query.min_price, max: req.query.max_price},
                 req.query.type,
+                req.query.status,
+                req.query.location
             )
             .then((machineData) => {
                 res.status(200).json(machineData);
@@ -904,7 +905,7 @@ router.put('/admin/update-user/:userId', authentication.check,authorization.isAd
 router.delete('/admin/delete-user/:userId', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for deleting a user
     try {
-        const user = persistence.getUserById(Number(req.params.userId));
+        const user = persistence.getUserByuserId(Number(req.params.userId));
         persistence.deleteUser(user.userId)
             .then((deletedUser) => {
                 if (deletedUser) {
