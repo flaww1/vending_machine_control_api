@@ -5,7 +5,7 @@ const session = require('express-session');
 
 
 const cors = require('cors');
-const bodyParser = require('body-parser');
+//const bodyParser = require('body-parser');
 
 
 
@@ -24,12 +24,21 @@ const app = express();
 
 app.use(morgan('dev'));
 
-app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({}));
+//app.use(bodyParser.json({extended: true}))
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cors(
+    {
+      origin: true,
+      credentials: true
+    }
+))
+//app.use(bodyParser.urlencoded({extended: true}))
+
 
 app.use(express.json());
-app.get('/', (req, res) => {
+app.get('/', cors() ,(req, res) => {
   res.json({
     message: '🦄🌈✨👋🌎🌍🌏✨🌈🦄',
   });
