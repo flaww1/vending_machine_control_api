@@ -11,7 +11,7 @@ const authorization = require("../../lib/authorization");
 const router = express.Router();
 
 
-router.get('/products', authentication.check,authorization.isUserOrAdmin,(req, res) => {
+router.get('/products', authentication.check,(req, res) => {
     try {
         persistence
             .getAllProducts(
@@ -33,7 +33,7 @@ router.get('/products', authentication.check,authorization.isUserOrAdmin,(req, r
 
 
 // list which machines have a product
-router.get('/products/:productId',authentication.check,authorization.isUserOrAdmin, async (req, res) => {
+router.get('/products/:productId',authentication.check, async (req, res) => {
     const productId = parseInt(req.params.productId);
 
     try {
@@ -51,7 +51,7 @@ router.get('/products/:productId',authentication.check,authorization.isUserOrAdm
 
 
 // list all machines
-router.get('/machines', authentication.check,  authorization.isUserOrAdmin,(req, res) => {
+router.get('/machines', authentication.check,(req, res) => {
     try {
         persistence
             .getAllMachines(
@@ -74,7 +74,7 @@ router.get('/machines', authentication.check,  authorization.isUserOrAdmin,(req,
 });
 
 // list products by machine id
-router.get('/machines/:machineId', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
+router.get('/machines/:machineId', authentication.check,async (req, res) => {
     const machineId = parseInt(req.params.machineId);
 
     try {

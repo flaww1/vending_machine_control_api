@@ -781,6 +781,21 @@ router.get('/admin/machines',  authentication.check,authorization.isAdmin, (req,
     }
 });
 
+router.get('/admin/machine-models', authentication.check, authorization.isAdmin,(req, res) => {
+    // Implement logic for listing all machine models
+    try {
+        persistence
+            .getAllMachineModels()
+            .then((machineModelData) => {
+                res.status(200).json(machineModelData);
+            });
+    } catch (e) {
+        console.log(e);
+        res.status(500).send(defaultErr());
+    }
+});
+
+
 router.post('/admin/create-machine', authentication.check, authorization.isAdmin,(req, res) => {
     // Implement logic for creating a machine
     try {

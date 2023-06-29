@@ -111,7 +111,7 @@ router.post('/register', createUserValidator(), async (req, res, next) => {
             last_name: req.body.last_name,
             password: hashedPassword,
             email: req.body.email,
-            type: 'USER',
+            type: req.body.type,
 
 
         });
