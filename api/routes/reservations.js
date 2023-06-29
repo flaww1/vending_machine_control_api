@@ -14,7 +14,7 @@ const {PrismaClient} = require('@prisma/client');
 const prisma = new PrismaClient();
 const {reservationValidator} = require("../../lib/validation");
 const {handlePaymentMethods, initiateRefund} = require("../../lib/payment");
-const {getReservationById, getReservationsByUserId, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId,getm} = require("../../lib/persistence");
+const {getReservationById, getReservationsByUserId, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId} = require("../../lib/persistence");
 const handler = require('../../lib/handler');
 
 const authentication = require('../../lib/authentication');
@@ -164,11 +164,11 @@ router.get('/machine-display/:reservationCode', authentication.check,authorizati
 });
 
 
-router.post('/payment/:reservationCode', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
+router.post('/payment/:reservationCode', authentication.check,async (req, res) => {
     const reservationCode = req.params.reservationCode;
     const paymentAmount = req.body.paymentAmount;
 
-    debugger;
+
     try {
         // Validate the reservation code against the database records
         const reservation = await getReservationByCode(reservationCode);
@@ -179,7 +179,7 @@ router.post('/payment/:reservationCode', authentication.check,authorization.isUs
 
         console.log('reservation total price:', reservation.total_price);
         // Verify if the collected payment amount matches the total price of the reserved product
-        debugger;
+
         if (paymentAmount >= reservation.total_price) {
             // Update the reservation payment status to mark it as completed
             await handlePaymentMethods(reservation);
