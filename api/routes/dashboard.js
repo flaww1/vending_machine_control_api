@@ -556,7 +556,7 @@ router.put('/admin/update-provider/:providerId', authentication.check,authorizat
     }
 });
 
-router.get('/admin/delete-provider/:providerId', authentication.check, authorization.isAdmin,async (req, res) => {
+router.delete('/admin/delete-provider/:providerId', authentication.check, authorization.isAdmin,async (req, res) => {
     // Implement logic for deleting a provider
     try {
         const provider = await persistence.getProviderById(req.params.providerId);

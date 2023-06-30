@@ -5,6 +5,7 @@ const {
     updateReservationPaymentStatus,
     createReservation,
     checkProductAvailabilityInMachine,
+
     dispenseProduct,
     checkProductQuantity, unlockProductQuantity,
 } = require('../../lib/reservation');
@@ -13,7 +14,7 @@ const {PrismaClient} = require('@prisma/client');
 const prisma = new PrismaClient();
 const {reservationValidator} = require("../../lib/validation");
 const {handlePaymentMethods, initiateRefund} = require("../../lib/payment");
-const {getReservationById, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId,getm} = require("../../lib/persistence");
+const {getReservationById, getReservationsByUserId, getReservationByCode, getUserByuserId, getProductById, getProductByReservationId} = require("../../lib/persistence");
 const handler = require('../../lib/handler');
 
 const authentication = require('../../lib/authentication');
@@ -21,9 +22,10 @@ const authorization = require('../../lib/authorization');
 const router = express.Router();
 
 // Define the reservation endpoint
-router.post('/make-reservation/:productId', authentication.check, authorization.isUserOrAdmin,/*reservationValidator()*/ async (req, res) => {
+router.post('/make-reservation/:productId', authentication.check,/*reservationValidator()*/ async (req, res) => {
+
     const product = await prisma.Product.findUnique({
-        where: { productId: Number(req.params.productId) },
+        where: { productId: parseInt(req.params.productId) },
     });
 
     console.log('Product:', product);
@@ -41,7 +43,7 @@ router.post('/make-reservation/:productId', authentication.check, authorization.
             console.log('Reservation expiration time:', reservationExpirationTime);
 
             const reservation = await createReservation({
-                userId: Number(req.body.userId),
+                userId: Number(req.user.userId),
                 productId: Number(req.params.productId),
                 machineId: Number(req.body.machineId),
                 shelfId: Number(req.body.shelfId),
@@ -54,111 +56,79 @@ router.post('/make-reservation/:productId', authentication.check, authorization.
 
             console.log('Reservation created successfully');
 
-            const productCheck = await prisma.product.findUnique({
-                where: {productId: reservation.productId},
+            const productCheck = await prisma.Product.findUnique({
+                where: {
+                    productId: reservation.productId,
+                },
                 include: {
                     Product_Shelf: {
                         select: {
                             shelfId: true,
                             quantity_inSlot: true,
-                        },
-                    },
-                    Machine: {
-                        select: {
-                            machineId: true,
-                            Shelf: {
-                                select: {
-                                    shelfId: true,
-                                    Product_Shelf: {
-                                        select: {
-                                            product_shelfId: true,
-                                            quantity_inSlot: true,
-                                        },
-                                    },
-                                },
-                            },
+                            product_shelfId: true, // Include the product_shelfId field
                         },
                     },
                 },
             });
 
-            const selectedMachineId = Number(req.body.machineId);
-            let selectedMachine;
-            if (Array.isArray(productCheck.Machine)) {
-                selectedMachine = productCheck.Machine.find((machine) => machine.machineId === selectedMachineId);
-            } else {
-                selectedMachine = productCheck.Machine;
+            const selectedShelfId = Number(req.body.shelfId);
+            let selectedShelf;
+
+            if (Array.isArray(productCheck.Product_Shelf)) {
+                selectedShelf = productCheck.Product_Shelf.find((shelf) => shelf.shelfId === selectedShelfId);
             }
 
-            if (selectedMachine && selectedMachine.machineId === selectedMachineId) {
-                console.log(`Product is available in machine ${selectedMachine.machineId}`);
-                const selectedShelfId = Number(req.body.shelfId);
-                let selectedShelf;
+            console.log('Selected shelf ID:', selectedShelfId);
+            console.log('Selected shelf:', selectedShelf);
 
-                if (Array.isArray(selectedMachine.Shelf)) {
-                    selectedShelf = selectedMachine.Shelf.find((shelf) => shelf.shelfId === selectedShelfId);
-                }
-
-                console.log('Selected machine:', selectedMachine);
-                console.log('Selected shelf ID:', selectedShelfId);
-                console.log('Selected shelf:', selectedShelf);
-
-                if (!selectedShelf) {
-                    console.log('Invalid shelf selection');
-                    throw new Error('Invalid shelf selection');
-                }
-
-                console.log('Finding the shelf containing the product...');
-                console.log('Shelf found');
-
-                console.log('Checking product quantity...');
-                if (selectedShelf.Product_Shelf.quantity_inSlot < reservation.quantity) {
-                    throw new Error('Insufficient quantity of the product');
-                }
-
-                console.log('Product quantity is sufficient');
-
-                console.log('Reserving the quantity of the product...');
-                const reservedQuantity = Math.min(
-                    parseInt(selectedShelf.Product_Shelf[0].quantity_inSlot),
-                    parseInt(reservation.quantity)
-                );
-
-                console.log('Product quantity reserved successfully');
-
-                try {
-                    console.log('selectedShelf.Product_Shelf:', selectedShelf.Product_Shelf);
-
-                    console.log('reservedQuantity:', reservedQuantity);
-
-                    // Updating the product quantity in the shelf
-                    const productShelfId = selectedShelf.Product_Shelf[0].product_shelfId;
-                    console.log('productShelfId:', productShelfId)
-                    const currentQuantity = selectedShelf.Product_Shelf[0].quantity_inSlot;
-                    console.log('currentQuantity:', currentQuantity)
-                    const updatedQuantity = currentQuantity - reservedQuantity;
-                    console.log('updatedQuantity:', updatedQuantity)
-
-                    await prisma.Product_Shelf.update({
-                        where: {
-                            product_shelfId: productShelfId,
-                        },
-                        data: {
-                            quantity_inSlot: updatedQuantity,
-                        },
-                    });
-
-
-
-                    console.log('Updating the shelf quantity...');
-                    console.log('Updating the machine quantity...');
-                } catch (error) {
-                    console.error('Error while updating quantities:', error);
-                    throw new Error('Failed to update quantities');
-                }
-
-
+            if (!selectedShelf) {
+                console.log('Invalid shelf selection');
+                throw new Error('Invalid shelf selection');
             }
+
+            console.log('Finding the shelf containing the product...');
+            console.log('Shelf found');
+
+            console.log('Checking product quantity...');
+            if (selectedShelf.quantity_inSlot < reservation.quantity) {
+                throw new Error('Insufficient quantity of the product');
+            }
+
+            console.log('Product quantity is sufficient');
+
+            console.log('Reserving the quantity of the product...');
+            const reservedQuantity = Math.min(parseInt(selectedShelf.quantity_inSlot), parseInt(reservation.quantity));
+
+            console.log('Product quantity reserved successfully');
+
+            try {
+                console.log('selectedShelf:', selectedShelf);
+                console.log('reservedQuantity:', reservedQuantity);
+
+                // Updating the product quantity in the shelf
+                const productShelfId = selectedShelf.product_shelfId; // Access the product_shelfId
+                console.log('productShelfId:', productShelfId)
+                const currentQuantity = selectedShelf.quantity_inSlot;
+                console.log('currentQuantity:', currentQuantity)
+                const updatedQuantity = currentQuantity - reservedQuantity;
+                console.log('updatedQuantity:', updatedQuantity)
+
+                await prisma.Product_Shelf.update({
+                    where: {
+                        product_shelfId: productShelfId,
+                    },
+                    data: {
+                        quantity_inSlot: updatedQuantity,
+                    },
+                });
+
+                console.log('Updating the shelf quantity...');
+            } catch (error) {
+                console.error('Error while updating quantities:', error);
+                throw new Error('Failed to update quantities');
+            }
+
+
 
 
             return reservation;
@@ -194,11 +164,11 @@ router.get('/machine-display/:reservationCode', authentication.check,authorizati
 });
 
 
-router.post('/payment/:reservationCode', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
+router.post('/payment/:reservationCode', authentication.check,async (req, res) => {
     const reservationCode = req.params.reservationCode;
     const paymentAmount = req.body.paymentAmount;
 
-    debugger;
+
     try {
         // Validate the reservation code against the database records
         const reservation = await getReservationByCode(reservationCode);
@@ -209,7 +179,7 @@ router.post('/payment/:reservationCode', authentication.check,authorization.isUs
 
         console.log('reservation total price:', reservation.total_price);
         // Verify if the collected payment amount matches the total price of the reserved product
-        debugger;
+
         if (paymentAmount >= reservation.total_price) {
             // Update the reservation payment status to mark it as completed
             await handlePaymentMethods(reservation);
@@ -346,6 +316,19 @@ router.put('/refund/:reservationId', authentication.check,authorization.isUserOr
     } catch (error) {
         console.error('Error while canceling reservation:', error);
         res.status(500).json({ error: 'An error occurred while refunding the reservation' });
+    }
+});
+
+router.get('/', authentication.check, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const reservations = await getReservationsByUserId(userId);
+
+        return res.json({ reservations });
+    } catch (error) {
+        console.error('Error while fetching user reservations:', error);
+        res.status(500).json({ error: 'An error occurred while fetching user reservations' });
     }
 });
 

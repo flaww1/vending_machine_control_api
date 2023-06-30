@@ -38,10 +38,9 @@ router.get('/products/:productId',authentication.check, async (req, res) => {
 
     try {
         const products = await persistence.getProductById(productId);
-        const machines = await persistence.getMachinesByProductId(productId);
 
 
-        res.json({ products, machines});
+        res.json({ products});
 
     } catch (error) {
         console.error(error);
