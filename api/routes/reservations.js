@@ -252,7 +252,7 @@ router.post('/payment/:reservationCode', authentication.check,async (req, res) =
     })
 
 // Reservation cancellation route
-    router.put('/cancel/:reservationId', authentication.check,authorization.isUserOrAdmin,async (req, res) => {
+    router.put('/cancel/:reservationId', authentication.check,async (req, res) => {
         const reservationId = parseInt(req.params.reservationId);
 
         try {
