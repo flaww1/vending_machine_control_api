@@ -714,7 +714,7 @@ router.post('/admin/create-product', authentication.check, authorization.isAdmin
 );
 
 
-router.put('/admin/update-product/:productId',authorization.isAdmin, (req, res) => {
+router.put('/admin/update-product/:productId', (req, res) => {
     const productId = parseInt(req.params.productId);
 
     try {
@@ -735,7 +735,7 @@ router.put('/admin/update-product/:productId',authorization.isAdmin, (req, res) 
     }
 });
 
-router.delete('/admin/delete-product/:productId', authorization.isAdmin,authentication.check, (req, res) => {
+router.delete('/admin/delete-product/:productId',authentication.check, (req, res) => {
     const productId = parseInt(req.params.productId);
 
     try {
@@ -816,7 +816,7 @@ router.post('/admin/create-machine', authentication.check, authorization.isAdmin
     }
 });
 
-router.put('/admin/update-machine/:machineId', authentication.check,authorization.isAdmin, (req, res) => {
+router.put('/admin/update-machine/:machineId', authentication.check, (req, res) => {
 
     // Implement logic for updating a machine
     try {
@@ -838,7 +838,7 @@ router.put('/admin/update-machine/:machineId', authentication.check,authorizatio
     }
 });
 
-router.delete('/admin/delete-machine/:machineId', authentication.check, authorization.isAdmin,(req, res) => {
+router.delete('/admin/delete-machine/:machineId', authentication.check,(req, res) => {
     // Implement logic for deleting a machine
     try {
         const machine = persistence.getMachineById(Number(req.params.machineId));
@@ -996,11 +996,11 @@ router.put('/admin/update-reservation/:reservationId', authentication.check, aut
 });
 
 
-router.delete('/admin/delete-reservation/:reservationId', authentication.check,authorization.isAdmin, (req, res) => {
+router.delete('/admin/delete-reservation/:reservationId', authentication.check ,(req, res) => {
     // Implement logic for deleting a reservation
     try {
-        const reservationCheck = persistence.getReservationById(Number(req.params.reservationId));
-        reservation.deleteReservation(reservationCheck.reservationId)
+        const reservationId =  Number(req.params.reservationId);
+        reservation.deleteReservation(reservationId)
             .then((deletedReservation) => {
                 if (deletedReservation) {
                     res.status(200)
